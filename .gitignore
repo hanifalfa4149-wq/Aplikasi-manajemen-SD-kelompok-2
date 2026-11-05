@@ -4,3 +4,9 @@ out/
 .idea/
 .vscode/
 .DS_Store
+.github/
+SYSTEM_DESIGN.md
+DATABASE.md
+PRD.md
+TEAM-WORKFLOW.md
+DOMAIN_MODEL.md
