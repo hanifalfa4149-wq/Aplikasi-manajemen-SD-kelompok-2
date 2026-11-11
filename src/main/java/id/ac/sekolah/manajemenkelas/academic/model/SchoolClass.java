@@ -29,6 +29,10 @@ public class SchoolClass {
         return id;
     }
 
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public Long getAcademicYearId() {
         return academicYearId;
     }

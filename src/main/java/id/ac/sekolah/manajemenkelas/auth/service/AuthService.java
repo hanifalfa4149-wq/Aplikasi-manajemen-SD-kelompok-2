@@ -4,20 +4,26 @@ import java.util.Optional;
 
 import id.ac.sekolah.manajemenkelas.auth.dao.AuthDAO;
 import id.ac.sekolah.manajemenkelas.auth.model.User;
+import id.ac.sekolah.manajemenkelas.core.security.PasswordHasher;
 import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
 
 public class AuthService {
 
     private final AuthDAO authDAO;
+    private final PasswordHasher passwordHasher;
     private final SessionContext sessionContext;
 
     public AuthService(AuthDAO authDAO) {
+        this(authDAO, new PasswordHasher());
+    }
+
+    public AuthService(AuthDAO authDAO, PasswordHasher passwordHasher) {
         this.authDAO = authDAO;
+        this.passwordHasher = passwordHasher;
         this.sessionContext = SessionContext.getInstance();
     }
 
     public boolean login(String username, String password) {
-
         if (username == null || username.isBlank()
                 || password == null || password.isBlank()) {
             return false;
@@ -35,12 +41,16 @@ public class AuthService {
             return false;
         }
 
-        if (!user.getPassword().equals(password)) {
+        if (!passwordHasher.verifyPassword(
+                password, user.getPasswordHash(), user.getPasswordSalt())) {
             return false;
         }
 
+        authDAO.updateLastLogin(user.getId());
+
         sessionContext.startSession(
                 user.getId(),
+                user.getTeacherId(),
                 user.getUsername(),
                 user.getFullName(),
                 user.getRole());

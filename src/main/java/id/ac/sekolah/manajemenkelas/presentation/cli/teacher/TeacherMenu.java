@@ -5,6 +5,9 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Scanner;
 
+import id.ac.sekolah.manajemenkelas.auth.model.RoleMapper;
+import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
+import id.ac.sekolah.manajemenkelas.presentation.cli.menu.MenuNavigator;
 import id.ac.sekolah.manajemenkelas.teacher.model.Teacher;
 import id.ac.sekolah.manajemenkelas.teacher.service.TeacherService;
 
@@ -23,31 +26,52 @@ public class TeacherMenu {
         boolean active = true;
 
         while (active) {
+            boolean showAdminOptions = !SessionContext.getInstance().isLoggedIn() || MenuNavigator.isAdmin();
 
             System.out.println("\n========== MANAJEMEN GURU ==========");
-            System.out.println("1. Tambah Guru");
+            if (showAdminOptions) {
+                System.out.println("1. Tambah Guru");
+            }
             System.out.println("2. Lihat Semua Guru");
             System.out.println("3. Cari Guru");
-            System.out.println("4. Edit Guru");
-            System.out.println("5. Nonaktifkan Guru");
+            if (showAdminOptions) {
+                System.out.println("4. Edit Guru");
+                System.out.println("5. Nonaktifkan Guru");
+            }
             System.out.println("0. Kembali");
             System.out.print("Pilih menu: ");
 
-            String choice = scanner.nextLine().trim();
+            String choice = MenuNavigator.readMenuChoice(scanner);
 
             try {
                 switch (choice) {
-                    case "1" -> createTeacher();
+                    case "1" -> {
+                        requireAdmin();
+                        createTeacher();
+                    }
                     case "2" -> displayTeachers(teacherService.getAllTeachers());
                     case "3" -> searchTeacher();
-                    case "4" -> updateTeacher();
-                    case "5" -> deactivateTeacher();
+                    case "4" -> {
+                        requireAdmin();
+                        updateTeacher();
+                    }
+                    case "5" -> {
+                        requireAdmin();
+                        deactivateTeacher();
+                    }
                     case "0" -> active = false;
                     default -> System.out.println("Pilihan tidak valid.");
                 }
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException | IllegalStateException e) {
                 System.out.println("Gagal: " + e.getMessage());
             }
+        }
+    }
+
+    private void requireAdmin() {
+        SessionContext session = SessionContext.getInstance();
+        if (session.isLoggedIn() && !session.hasRole(RoleMapper.ROLE_ADMIN)) {
+            throw new IllegalArgumentException("Akses ditolak: hanya ADMIN yang dapat mengubah data guru.");
         }
     }
 
@@ -117,7 +141,7 @@ public class TeacherMenu {
 
         LocalDate joinDate = dateInput.isEmpty()
                 ? teacher.getJoinDate()
-                : LocalDate.parse(dateInput);
+                : parseDate(dateInput);
 
         teacherService.updateTeacher(
                 id, nip, name, gender, email, phone,
@@ -170,8 +194,12 @@ public class TeacherMenu {
     }
 
     private LocalDate readDate() {
+        return parseDate(scanner.nextLine().trim());
+    }
+
+    private LocalDate parseDate(String raw) {
         try {
-            return LocalDate.parse(scanner.nextLine().trim());
+            return LocalDate.parse(raw);
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Format tanggal harus YYYY-MM-DD.");
         }

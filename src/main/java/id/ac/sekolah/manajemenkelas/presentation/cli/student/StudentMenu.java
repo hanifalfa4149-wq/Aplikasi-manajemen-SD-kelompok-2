@@ -1,5 +1,10 @@
 package id.ac.sekolah.manajemenkelas.presentation.cli.student;
 
+import id.ac.sekolah.manajemenkelas.academic.model.StudentPlacement;
+import id.ac.sekolah.manajemenkelas.academic.service.AcademicService;
+import id.ac.sekolah.manajemenkelas.auth.model.RoleMapper;
+import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
+import id.ac.sekolah.manajemenkelas.presentation.cli.menu.MenuNavigator;
 import id.ac.sekolah.manajemenkelas.student.model.Student;
 import id.ac.sekolah.manajemenkelas.student.service.StudentService;
 
@@ -12,10 +17,19 @@ public class StudentMenu {
 
     private final Scanner scanner;
     private final StudentService studentService;
+    private final AcademicService academicService;
 
     public StudentMenu(Scanner scanner, StudentService studentService) {
+        this(scanner, studentService, null);
+    }
+
+    public StudentMenu(
+            Scanner scanner,
+            StudentService studentService,
+            AcademicService academicService) {
         this.scanner = scanner;
         this.studentService = studentService;
+        this.academicService = academicService;
     }
 
     public void show() {
@@ -23,31 +37,83 @@ public class StudentMenu {
         boolean active = true;
 
         while (active) {
+            boolean showAdminOptions = !SessionContext.getInstance().isLoggedIn() || MenuNavigator.isAdmin();
 
             System.out.println("\n========== MANAJEMEN SISWA ==========");
-            System.out.println("1. Tambah Siswa");
+            if (showAdminOptions) {
+                System.out.println("1. Tambah Siswa");
+            }
             System.out.println("2. Lihat Semua Siswa");
             System.out.println("3. Cari Siswa");
-            System.out.println("4. Edit Siswa");
-            System.out.println("5. Nonaktifkan Siswa");
+            if (showAdminOptions) {
+                System.out.println("4. Edit Siswa");
+                System.out.println("5. Nonaktifkan Siswa");
+            }
+            if (academicService != null) {
+                System.out.println("6. Riwayat Penempatan Kelas Siswa");
+            }
             System.out.println("0. Kembali");
             System.out.print("Pilih menu: ");
 
-            String choice = scanner.nextLine().trim();
+            String choice = MenuNavigator.readMenuChoice(scanner);
 
             try {
                 switch (choice) {
-                    case "1" -> createStudent();
+                    case "1" -> {
+                        requireAdmin();
+                        createStudent();
+                    }
                     case "2" -> displayStudents(studentService.getAllStudents());
                     case "3" -> searchStudent();
-                    case "4" -> updateStudent();
-                    case "5" -> deactivateStudent();
+                    case "4" -> {
+                        requireAdmin();
+                        updateStudent();
+                    }
+                    case "5" -> {
+                        requireAdmin();
+                        deactivateStudent();
+                    }
+                    case "6" -> {
+                        if (academicService != null) {
+                            viewStudentPlacementHistory();
+                        } else {
+                            System.out.println("Pilihan tidak valid.");
+                        }
+                    }
                     case "0" -> active = false;
                     default -> System.out.println("Pilihan tidak valid.");
                 }
-            } catch (IllegalArgumentException e) {
+            } catch (IllegalArgumentException | IllegalStateException e) {
                 System.out.println("Gagal: " + e.getMessage());
             }
+        }
+    }
+
+    private void requireAdmin() {
+        SessionContext session = SessionContext.getInstance();
+        if (session.isLoggedIn() && !session.hasRole(RoleMapper.ROLE_ADMIN)) {
+            throw new IllegalArgumentException("Akses ditolak: hanya ADMIN yang dapat mengubah data siswa.");
+        }
+    }
+
+    private void viewStudentPlacementHistory() {
+        System.out.print("Masukkan ID siswa: ");
+        Long studentId = readLong();
+
+        List<StudentPlacement> history = academicService.getPlacementHistoryByStudent(studentId);
+        if (history.isEmpty()) {
+            System.out.println("Siswa belum memiliki riwayat penempatan kelas.");
+            return;
+        }
+        System.out.println("\n========== RIWAYAT KELAS SISWA ==========");
+        for (StudentPlacement p : history) {
+            System.out.println("----------------------------------");
+            System.out.println("ID Riwayat   : " + p.getId());
+            System.out.println("ID Kelas     : " + p.getClassId());
+            System.out.println("Tahun Ajaran : " + p.getAcademicYearId());
+            System.out.println("Tgl Masuk    : " + p.getEntryDate());
+            System.out.println("Tgl Keluar   : " + (p.getExitDate() != null ? p.getExitDate() : "-"));
+            System.out.println("Status       : " + p.getStatus());
         }
     }
 
@@ -118,7 +184,7 @@ public class StudentMenu {
         String dateInput = scanner.nextLine().trim();
         LocalDate birthDate = dateInput.isEmpty()
                 ? student.getBirthDate()
-                : LocalDate.parse(dateInput);
+                : parseDate(dateInput);
 
         String birthPlace = readOptional("Tempat lahir", student.getBirthPlace());
         String address = readOptional("Alamat", student.getAddress());
@@ -178,8 +244,12 @@ public class StudentMenu {
     }
 
     private LocalDate readDate() {
+        return parseDate(scanner.nextLine().trim());
+    }
+
+    private LocalDate parseDate(String raw) {
         try {
-            return LocalDate.parse(scanner.nextLine().trim());
+            return LocalDate.parse(raw);
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Format tanggal harus YYYY-MM-DD.");
         }

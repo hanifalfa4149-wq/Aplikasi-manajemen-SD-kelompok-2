@@ -11,4 +11,6 @@ public interface AuthDAO {
     boolean existsByUsername(String username);
 
     void save(User user);
+
+    void updateLastLogin(Long userId);
 }

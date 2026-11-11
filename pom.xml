@@ -6,6 +6,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- Project Identity -->
     <groupId>id.ac.sekolah</groupId>
     <artifactId>sistem-manajemen-kelas-sd</artifactId>
     <version>1.0.0-SNAPSHOT</version>
@@ -15,11 +16,33 @@
         Aplikasi manajemen kelas sekolah dasar berbasis Java.
     </description>
 
+    <!-- Project Properties -->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
     </properties>
 
+    <!-- Dependencies -->
+    <dependencies>
+
+        <!-- PostgreSQL JDBC Driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.7</version>
+        </dependency>
+
+        <!-- JUnit 5 (Testing) -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.11.4</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!-- Build Configuration -->
     <build>
         <plugins>
 

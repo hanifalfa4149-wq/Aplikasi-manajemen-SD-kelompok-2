@@ -1,0 +1,66 @@
+# ==========================================
+# APPLICATION CONFIGURATION (TEMPLATE)
+# Copy this file to application.properties
+# and set your local PostgreSQL credentials.
+# Do NOT commit application.properties!
+# ==========================================
+
+app.name=manajemen-sd
+app.version=1.0.0
+app.description=Aplikasi Manajemen Kelas Sekolah Dasar
+
+
+# ==========================================
+# DATABASE CONFIGURATION
+# ==========================================
+
+db.type=postgresql
+
+# PostgreSQL Connection
+db.host=localhost
+db.port=5432
+db.name=manajemen-sd
+db.url=jdbc:postgresql://${db.host}:${db.port}/${db.name}
+
+# Database Credentials (replace with your local PostgreSQL credentials)
+db.username=postgres
+db.password=CHANGE_ME
+
+# JDBC Driver
+db.driver=org.postgresql.Driver
+
+
+# ==========================================
+# DATABASE CONNECTION SETTINGS
+# ==========================================
+
+db.connection.timeout=30
+db.socket.timeout=30
+db.application.name=manajemen-kelas-sd
+
+
+# ==========================================
+# DATABASE TRANSACTION SETTINGS
+# ==========================================
+
+db.auto.commit=true
+db.transaction.isolation=READ_COMMITTED
+
+
+# ==========================================
+# LOGGING CONFIGURATION
+# ==========================================
+
+app.logging.level=INFO
+app.logging.show.sql=false
+
+
+# ==========================================
+# SECURITY CONFIGURATION
+# ==========================================
+
+security.password.algorithm=PBKDF2WithHmacSHA256
+security.password.iterations=600000
+security.password.key-length=256
+security.password.salt-length=16
+

@@ -13,9 +13,16 @@ public class AuthMenu {
     public void displaySessionInfo() {
 
         System.out.println("\n========== INFORMASI SESSION ==========");
-        System.out.println("User ID  : " + sessionContext.getUserId());
-        System.out.println("Username : " + sessionContext.getUsername());
-        System.out.println("Nama     : " + sessionContext.getFullName());
-        System.out.println("Role     : " + sessionContext.getRole());
+        if (!sessionContext.isLoggedIn()) {
+            System.out.println("Belum ada sesi login aktif.");
+            return;
+        }
+        System.out.println("User ID    : " + sessionContext.getUserId());
+        if (sessionContext.getTeacherId() != null) {
+            System.out.println("Teacher ID : " + sessionContext.getTeacherId());
+        }
+        System.out.println("Username   : " + sessionContext.getUsername());
+        System.out.println("Nama       : " + sessionContext.getFullName());
+        System.out.println("Role       : " + sessionContext.getRole());
     }
 }

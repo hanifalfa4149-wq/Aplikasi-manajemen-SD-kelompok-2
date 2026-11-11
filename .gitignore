@@ -1,12 +1,19 @@
+# Compiled & Build Artifacts
 *.class
+*.jar
 target/
 out/
+build/
+
+# IDE & OS Files
 .idea/
 .vscode/
 .DS_Store
+*.log
+
+# Local Credentials & Environment Secrets
+src/main/resources/application.properties
+.env
+
+# Local CI/Tooling Directory
 .github/
-SYSTEM_DESIGN.md
-DATABASE.md
-PRD.md
-TEAM_WORKFLOW.md
-DOMAIN_MODEL.md
