@@ -3,19 +3,17 @@ package id.ac.sekolah.manajemenkelas.student.service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
+import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
 import id.ac.sekolah.manajemenkelas.student.dao.StudentDAO;
 import id.ac.sekolah.manajemenkelas.student.model.Student;
 
 public class StudentService {
 
     private final StudentDAO studentDAO;
-    private final AtomicLong idGenerator;
 
     public StudentService(StudentDAO studentDAO) {
         this.studentDAO = studentDAO;
-        this.idGenerator = new AtomicLong(1);
     }
 
     public Student createStudent(
@@ -28,6 +26,8 @@ public class StudentService {
             String address,
             String parentName,
             String parentPhone) {
+
+        SessionContext.getInstance().requireAdminIfAuthenticated("siswa");
 
         validateStudentData(
                 nis, nisn, fullName, gender,
@@ -42,11 +42,11 @@ public class StudentService {
         }
 
         Student student = new Student(
-                idGenerator.getAndIncrement(),
+                null,
                 nis.trim(),
                 nisn.trim(),
                 fullName.trim(),
-                gender,
+                gender.trim().toUpperCase(),
                 birthDate,
                 birthPlace.trim(),
                 address.trim(),
@@ -79,6 +79,8 @@ public class StudentService {
             String parentName,
             String parentPhone) {
 
+        SessionContext.getInstance().requireAdminIfAuthenticated("siswa");
+
         Student existing = studentDAO.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
 
@@ -103,7 +105,7 @@ public class StudentService {
         existing.setNis(nis.trim());
         existing.setNisn(nisn.trim());
         existing.setFullName(fullName.trim());
-        existing.setGender(gender);
+        existing.setGender(gender.trim().toUpperCase());
         existing.setBirthDate(birthDate);
         existing.setBirthPlace(birthPlace.trim());
         existing.setAddress(address.trim());
@@ -116,6 +118,8 @@ public class StudentService {
     }
 
     public void deleteStudent(Long id) {
+
+        SessionContext.getInstance().requireAdminIfAuthenticated("siswa");
 
         Student student = studentDAO.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
@@ -133,9 +137,12 @@ public class StudentService {
         String search = keyword.trim().toLowerCase();
 
         return studentDAO.findAll().stream()
-                .filter(student -> student.getFullName().toLowerCase().contains(search)
-                        || student.getNis().toLowerCase().contains(search)
-                        || student.getNisn().toLowerCase().contains(search))
+                .filter(student -> (student.getFullName() != null
+                                && student.getFullName().toLowerCase().contains(search))
+                        || (student.getNis() != null
+                                && student.getNis().toLowerCase().contains(search))
+                        || (student.getNisn() != null
+                                && student.getNisn().toLowerCase().contains(search)))
                 .toList();
     }
 
