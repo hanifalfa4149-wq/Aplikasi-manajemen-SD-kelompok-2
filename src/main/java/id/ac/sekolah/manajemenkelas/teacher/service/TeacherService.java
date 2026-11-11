@@ -3,19 +3,17 @@ package id.ac.sekolah.manajemenkelas.teacher.service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
+import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
 import id.ac.sekolah.manajemenkelas.teacher.dao.TeacherDAO;
 import id.ac.sekolah.manajemenkelas.teacher.model.Teacher;
 
 public class TeacherService {
 
     private final TeacherDAO teacherDAO;
-    private final AtomicLong idGenerator;
 
     public TeacherService(TeacherDAO teacherDAO) {
         this.teacherDAO = teacherDAO;
-        this.idGenerator = new AtomicLong(1);
     }
 
     public Teacher createTeacher(
@@ -28,6 +26,8 @@ public class TeacherService {
             String education,
             LocalDate joinDate) {
 
+        SessionContext.getInstance().requireAdminIfAuthenticated("guru");
+
         validateTeacherData(
                 nip, fullName, gender,
                 email, address, education, joinDate);
@@ -36,12 +36,22 @@ public class TeacherService {
             throw new IllegalArgumentException("NIP sudah terdaftar.");
         }
 
+        String normalizedEmail = email == null ? "" : email.trim();
+        if (!normalizedEmail.isEmpty()) {
+            boolean emailUsed = teacherDAO.findAll().stream()
+                    .anyMatch(teacher -> teacher.getEmail() != null
+                            && teacher.getEmail().equalsIgnoreCase(normalizedEmail));
+            if (emailUsed) {
+                throw new IllegalArgumentException("Email sudah terdaftar.");
+            }
+        }
+
         Teacher teacher = new Teacher(
-                idGenerator.getAndIncrement(),
+                null,
                 nip.trim(),
                 fullName.trim(),
-                gender.toUpperCase(),
-                email == null ? "" : email.trim(),
+                gender.trim().toUpperCase(),
+                normalizedEmail,
                 phone == null ? "" : phone.trim(),
                 address.trim(),
                 education.trim(),
@@ -72,6 +82,8 @@ public class TeacherService {
             String education,
             LocalDate joinDate) {
 
+        SessionContext.getInstance().requireAdminIfAuthenticated("guru");
+
         Teacher existing = teacherDAO.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Data guru tidak ditemukan."));
 
@@ -86,10 +98,21 @@ public class TeacherService {
             throw new IllegalArgumentException("NIP sudah digunakan guru lain.");
         }
 
+        String normalizedEmail = email == null ? "" : email.trim();
+        if (!normalizedEmail.isEmpty()) {
+            boolean emailUsedByOther = teacherDAO.findAll().stream()
+                    .anyMatch(teacher -> !teacher.getId().equals(id)
+                            && teacher.getEmail() != null
+                            && teacher.getEmail().equalsIgnoreCase(normalizedEmail));
+            if (emailUsedByOther) {
+                throw new IllegalArgumentException("Email sudah digunakan guru lain.");
+            }
+        }
+
         existing.setNip(nip.trim());
         existing.setFullName(fullName.trim());
-        existing.setGender(gender.toUpperCase());
-        existing.setEmail(email == null ? "" : email.trim());
+        existing.setGender(gender.trim().toUpperCase());
+        existing.setEmail(normalizedEmail);
         existing.setPhone(phone == null ? "" : phone.trim());
         existing.setAddress(address.trim());
         existing.setEducation(education.trim());
@@ -101,6 +124,8 @@ public class TeacherService {
     }
 
     public void deleteTeacher(Long id) {
+
+        SessionContext.getInstance().requireAdminIfAuthenticated("guru");
 
         Teacher teacher = teacherDAO.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Data guru tidak ditemukan."));
@@ -118,9 +143,12 @@ public class TeacherService {
         String search = keyword.trim().toLowerCase();
 
         return teacherDAO.findAll().stream()
-                .filter(teacher -> teacher.getFullName().toLowerCase().contains(search)
-                        || teacher.getNip().toLowerCase().contains(search)
-                        || teacher.getEmail().toLowerCase().contains(search))
+                .filter(teacher -> (teacher.getFullName() != null
+                                && teacher.getFullName().toLowerCase().contains(search))
+                        || (teacher.getNip() != null
+                                && teacher.getNip().toLowerCase().contains(search))
+                        || (teacher.getEmail() != null
+                                && teacher.getEmail().toLowerCase().contains(search)))
                 .toList();
     }
 
