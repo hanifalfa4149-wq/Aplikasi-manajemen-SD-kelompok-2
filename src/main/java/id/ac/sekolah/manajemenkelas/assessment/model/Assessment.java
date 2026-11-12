@@ -14,28 +14,28 @@ public class Assessment {
     public static final String TYPE_LAINNYA = "LAINNYA";
 
     private Long id;
-    private Long teachingAssignmentId;
-    private String title;
-    private String assessmentType;
-    private LocalDate assessmentDate;
-    private BigDecimal maxScore;
-    private String description;
+    private Long idPenugasanMengajar;
+    private String judul;
+    private String jenisPenilaian;
+    private LocalDate tanggalPenilaian;
+    private BigDecimal nilaiMaksimal;
+    private String deskripsi;
 
     public Assessment(
             Long id,
-            Long teachingAssignmentId,
-            String title,
-            String assessmentType,
-            LocalDate assessmentDate,
-            BigDecimal maxScore,
-            String description) {
+            Long idPenugasanMengajar,
+            String judul,
+            String jenisPenilaian,
+            LocalDate tanggalPenilaian,
+            BigDecimal nilaiMaksimal,
+            String deskripsi) {
         this.id = id;
-        this.teachingAssignmentId = teachingAssignmentId;
-        this.title = title;
-        this.assessmentType = assessmentType;
-        this.assessmentDate = assessmentDate;
-        this.maxScore = maxScore;
-        this.description = description;
+        this.idPenugasanMengajar = idPenugasanMengajar;
+        this.judul = judul;
+        this.jenisPenilaian = jenisPenilaian;
+        this.tanggalPenilaian = tanggalPenilaian;
+        this.nilaiMaksimal = nilaiMaksimal;
+        this.deskripsi = deskripsi;
     }
 
     public Long getId() {
@@ -47,51 +47,50 @@ public class Assessment {
     }
 
     public Long getTeachingAssignmentId() {
-        return teachingAssignmentId;
+        return idPenugasanMengajar;
     }
 
-    public void setTeachingAssignmentId(Long teachingAssignmentId) {
-        this.teachingAssignmentId = teachingAssignmentId;
+    public void setTeachingAssignmentId(Long idPenugasanMengajar) {
+        this.idPenugasanMengajar = idPenugasanMengajar;
     }
 
     public String getTitle() {
-        return title;
+        return judul;
     }
 
-    public void setTitle(String title) {
-        this.title = title;
+    public void setTitle(String judul) {
+        this.judul = judul;
     }
 
     public String getAssessmentType() {
-        return assessmentType;
+        return jenisPenilaian;
     }
 
-    public void setAssessmentType(String assessmentType) {
-        this.assessmentType = assessmentType;
+    public void setAssessmentType(String jenisPenilaian) {
+        this.jenisPenilaian = jenisPenilaian;
     }
 
     public LocalDate getAssessmentDate() {
-        return assessmentDate;
+        return tanggalPenilaian;
     }
 
-    public void setAssessmentDate(LocalDate assessmentDate) {
-        this.assessmentDate = assessmentDate;
+    public void setAssessmentDate(LocalDate tanggalPenilaian) {
+        this.tanggalPenilaian = tanggalPenilaian;
     }
 
     public BigDecimal getMaxScore() {
-        return maxScore;
+        return nilaiMaksimal;
     }
 
-    public void setMaxScore(BigDecimal maxScore) {
-        this.maxScore = maxScore;
+    public void setMaxScore(BigDecimal nilaiMaksimal) {
+        this.nilaiMaksimal = nilaiMaksimal;
     }
 
     public String getDescription() {
-        return description;
+        return deskripsi;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setDescription(String deskripsi) {
+        this.deskripsi = deskripsi;
     }
 }
-

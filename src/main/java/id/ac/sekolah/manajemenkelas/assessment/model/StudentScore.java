@@ -5,25 +5,25 @@ import java.math.BigDecimal;
 public class StudentScore {
 
     private Long id;
-    private Long assessmentId;
-    private Long studentId;
-    private BigDecimal score;
-    private String notes;
-    private Long recordedBy;
+    private Long idPenilaian;
+    private Long idSiswa;
+    private BigDecimal nilai;
+    private String keterangan;
+    private Long dicatatOleh;
 
     public StudentScore(
             Long id,
-            Long assessmentId,
-            Long studentId,
-            BigDecimal score,
-            String notes,
-            Long recordedBy) {
+            Long idPenilaian,
+            Long idSiswa,
+            BigDecimal nilai,
+            String keterangan,
+            Long dicatatOleh) {
         this.id = id;
-        this.assessmentId = assessmentId;
-        this.studentId = studentId;
-        this.score = score;
-        this.notes = notes;
-        this.recordedBy = recordedBy;
+        this.idPenilaian = idPenilaian;
+        this.idSiswa = idSiswa;
+        this.nilai = nilai;
+        this.keterangan = keterangan;
+        this.dicatatOleh = dicatatOleh;
     }
 
     public Long getId() {
@@ -35,43 +35,42 @@ public class StudentScore {
     }
 
     public Long getAssessmentId() {
-        return assessmentId;
+        return idPenilaian;
     }
 
-    public void setAssessmentId(Long assessmentId) {
-        this.assessmentId = assessmentId;
+    public void setAssessmentId(Long idPenilaian) {
+        this.idPenilaian = idPenilaian;
     }
 
     public Long getStudentId() {
-        return studentId;
+        return idSiswa;
     }
 
-    public void setStudentId(Long studentId) {
-        this.studentId = studentId;
+    public void setStudentId(Long idSiswa) {
+        this.idSiswa = idSiswa;
     }
 
     public BigDecimal getScore() {
-        return score;
+        return nilai;
     }
 
-    public void setScore(BigDecimal score) {
-        this.score = score;
+    public void setScore(BigDecimal nilai) {
+        this.nilai = nilai;
     }
 
     public String getNotes() {
-        return notes;
+        return keterangan;
     }
 
-    public void setNotes(String notes) {
-        this.notes = notes;
+    public void setNotes(String keterangan) {
+        this.keterangan = keterangan;
     }
 
     public Long getRecordedBy() {
-        return recordedBy;
+        return dicatatOleh;
     }
 
-    public void setRecordedBy(Long recordedBy) {
-        this.recordedBy = recordedBy;
+    public void setRecordedBy(Long dicatatOleh) {
+        this.dicatatOleh = dicatatOleh;
     }
 }
-

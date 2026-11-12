@@ -13,18 +13,18 @@ import java.util.Properties;
  */
 public final class DatabaseConfig {
 
-    private static final Properties PROPERTIES = new Properties();
+    private static final Properties KONFIGURASI = new Properties();
 
     static {
-        try (InputStream input = DatabaseConfig.class.getClassLoader()
+        try (InputStream aliranInput = DatabaseConfig.class.getClassLoader()
                 .getResourceAsStream("application.properties")) {
 
-            if (input == null) {
+            if (aliranInput == null) {
                 throw new IllegalStateException("application.properties tidak ditemukan");
             }
 
-            PROPERTIES.load(input);
-            Class.forName(PROPERTIES.getProperty("db.driver", "org.postgresql.Driver").trim());
+            KONFIGURASI.load(aliranInput);
+            Class.forName(KONFIGURASI.getProperty("db.driver", "org.postgresql.Driver").trim());
         } catch (IOException | ClassNotFoundException e) {
             throw new ExceptionInInitializerError(e);
         }
@@ -34,75 +34,83 @@ public final class DatabaseConfig {
     }
 
     public static Connection getConnection() throws SQLException {
-        String host = requireProperty("db.host");
-        String port = requireProperty("db.port");
-        String database = requireProperty("db.name");
-        String username = requireProperty("db.username");
-        String password = requireProperty("db.password");
+        String host = ambilPropertiWajib("db.host");
+        String port = ambilPropertiWajib("db.port");
+        String namaDatabase = ambilPropertiWajib("db.name");
+        String namaPengguna = ambilPropertiWajib("db.username");
+        String kataSandi = ambilPropertiWajib("db.password");
 
-        String url = "jdbc:postgresql://" + host + ":" + port + "/" + database;
+        String urlJdbc = "jdbc:postgresql://" + host + ":" + port + "/" + namaDatabase;
 
-        Properties jdbcProps = new Properties();
-        jdbcProps.setProperty("user", username);
-        jdbcProps.setProperty("password", password);
+        Properties propertiJdbc = new Properties();
+        propertiJdbc.setProperty("user", namaPengguna);
+        propertiJdbc.setProperty("password", kataSandi);
 
-        String connectTimeout = PROPERTIES.getProperty("db.connection.timeout", "30").trim();
-        String socketTimeout = PROPERTIES.getProperty("db.socket.timeout", "30").trim();
-        String appName = PROPERTIES.getProperty("db.application.name", "manajemen-kelas-sd").trim();
+        String batasWaktuKoneksi = KONFIGURASI.getProperty("db.connection.timeout", "30").trim();
+        String batasWaktuSoket = KONFIGURASI.getProperty("db.socket.timeout", "30").trim();
+        String namaAplikasi = KONFIGURASI.getProperty("db.application.name", "manajemen-kelas-sd").trim();
 
-        if (!connectTimeout.isBlank()) {
-            jdbcProps.setProperty("connectTimeout", connectTimeout);
+        if (!batasWaktuKoneksi.isBlank()) {
+            propertiJdbc.setProperty("connectTimeout", batasWaktuKoneksi);
         }
-        if (!socketTimeout.isBlank()) {
-            jdbcProps.setProperty("socketTimeout", socketTimeout);
+        if (!batasWaktuSoket.isBlank()) {
+            propertiJdbc.setProperty("socketTimeout", batasWaktuSoket);
         }
-        if (!appName.isBlank()) {
-            jdbcProps.setProperty("ApplicationName", appName);
+        if (!namaAplikasi.isBlank()) {
+            propertiJdbc.setProperty("ApplicationName", namaAplikasi);
         }
 
-        Connection connection = DriverManager.getConnection(url, jdbcProps);
+        Connection koneksi = DriverManager.getConnection(urlJdbc, propertiJdbc);
         try {
-            applyConnectionSettings(connection);
-            return connection;
+            terapkanPengaturanKoneksi(koneksi);
+            return koneksi;
         } catch (SQLException e) {
             try {
-                connection.close();
-            } catch (SQLException suppressed) {
-                e.addSuppressed(suppressed);
+                koneksi.close();
+            } catch (SQLException exTambahan) {
+                e.addSuppressed(exTambahan);
             }
             throw e;
         }
     }
 
     public static boolean isConnectionAvailable() {
-        try (Connection conn = getConnection()) {
-            return conn.isValid(5);
+        try (Connection koneksi = getConnection()) {
+            return koneksi.isValid(5);
         } catch (SQLException e) {
             return false;
         }
     }
 
-    private static void applyConnectionSettings(Connection connection) throws SQLException {
-        boolean autoCommit = Boolean.parseBoolean(
-                PROPERTIES.getProperty("db.auto.commit", "true").trim());
-        connection.setAutoCommit(autoCommit);
+    private static void terapkanPengaturanKoneksi(Connection koneksi) throws SQLException {
+        boolean statusAutoCommit = Boolean.parseBoolean(
+                KONFIGURASI.getProperty("db.auto.commit", "true").trim());
+        koneksi.setAutoCommit(statusAutoCommit);
 
-        String isolation = PROPERTIES.getProperty("db.transaction.isolation", "READ_COMMITTED")
+        String tingkatIsolasi = KONFIGURASI.getProperty("db.transaction.isolation", "READ_COMMITTED")
                 .trim()
                 .toUpperCase();
-        switch (isolation) {
-            case "READ_UNCOMMITTED" -> connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
-            case "REPEATABLE_READ" -> connection.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
-            case "SERIALIZABLE" -> connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-            default -> connection.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        switch (tingkatIsolasi) {
+            case "READ_UNCOMMITTED":
+                koneksi.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
+                break;
+            case "REPEATABLE_READ":
+                koneksi.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+                break;
+            case "SERIALIZABLE":
+                koneksi.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+                break;
+            default:
+                koneksi.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+                break;
         }
     }
 
-    private static String requireProperty(String key) {
-        String value = PROPERTIES.getProperty(key);
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("Konfigurasi database '" + key + "' belum diisi.");
+    private static String ambilPropertiWajib(String kunci) {
+        String nilai = KONFIGURASI.getProperty(kunci);
+        if (nilai == null || nilai.isBlank()) {
+            throw new IllegalStateException("Konfigurasi database '" + kunci + "' belum diisi.");
         }
-        return value.trim();
+        return nilai.trim();
     }
 }

@@ -7,6 +7,8 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import id.ac.sekolah.manajemenkelas.auth.model.RoleMapper;
@@ -23,6 +25,20 @@ public class PostgresAuthDAO implements AuthDAO {
                    nama_lengkap, peran, aktif, terakhir_login
             FROM pengguna
             WHERE LOWER(nama_pengguna) = LOWER(?)
+            """;
+
+    private static final String SQL_FIND_BY_TEACHER_ID = """
+            SELECT id, id_guru, nama_pengguna, hash_kata_sandi, salt_kata_sandi,
+                   nama_lengkap, peran, aktif, terakhir_login
+            FROM pengguna
+            WHERE id_guru = ?
+            """;
+
+    private static final String SQL_FIND_ALL = """
+            SELECT id, id_guru, nama_pengguna, hash_kata_sandi, salt_kata_sandi,
+                   nama_lengkap, peran, aktif, terakhir_login
+            FROM pengguna
+            ORDER BY id ASC
             """;
 
     private static final String SQL_EXISTS_BY_USERNAME = """
@@ -43,6 +59,19 @@ public class PostgresAuthDAO implements AuthDAO {
                 terakhir_login
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id
+            """;
+
+    private static final String SQL_UPDATE_USER = """
+            UPDATE pengguna
+            SET id_guru = ?,
+                nama_pengguna = ?,
+                hash_kata_sandi = ?,
+                salt_kata_sandi = ?,
+                nama_lengkap = ?,
+                peran = ?,
+                aktif = ?,
+                diperbarui_pada = CURRENT_TIMESTAMP
+            WHERE id = ?
             """;
 
     private static final String SQL_UPDATE_LAST_LOGIN = """
@@ -71,6 +100,44 @@ public class PostgresAuthDAO implements AuthDAO {
             }
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mencari pengguna berdasarkan username.", e);
+        }
+    }
+
+    @Override
+    public Optional<User> findByTeacherId(Long teacherId) {
+        if (teacherId == null) {
+            return Optional.empty();
+        }
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SQL_FIND_BY_TEACHER_ID)) {
+
+            ps.setLong(1, teacherId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapRowToUser(rs));
+                }
+                return Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Gagal mencari pengguna berdasarkan profil guru.", e);
+        }
+    }
+
+    @Override
+    public List<User> findAll() {
+        List<User> daftarPengguna = new ArrayList<>();
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SQL_FIND_ALL);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                daftarPengguna.add(mapRowToUser(rs));
+            }
+            return daftarPengguna;
+        } catch (SQLException e) {
+            throw new IllegalStateException("Gagal memuat daftar pengguna dari database.", e);
         }
     }
 
@@ -145,6 +212,47 @@ public class PostgresAuthDAO implements AuthDAO {
     }
 
     @Override
+    public void update(User user) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("Data pengguna dan ID pengguna wajib diisi saat memperbarui.");
+        }
+        if (user.getUsername() == null || user.getUsername().isBlank()) {
+            throw new IllegalArgumentException("Username wajib diisi.");
+        }
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+            throw new IllegalArgumentException("Hash kata sandi wajib diisi.");
+        }
+        if (user.getPasswordSalt() == null || user.getPasswordSalt().isBlank()) {
+            throw new IllegalArgumentException("Salt kata sandi wajib diisi.");
+        }
+        if (user.getFullName() == null || user.getFullName().isBlank()) {
+            throw new IllegalArgumentException("Nama lengkap pengguna wajib diisi.");
+        }
+
+        String dbRole = RoleMapper.toDatabaseRole(user.getRole());
+
+        try (Connection conn = DatabaseConfig.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SQL_UPDATE_USER)) {
+
+            if (user.getTeacherId() != null) {
+                ps.setLong(1, user.getTeacherId());
+            } else {
+                ps.setNull(1, Types.BIGINT);
+            }
+            ps.setString(2, user.getUsername().trim());
+            ps.setString(3, user.getPasswordHash());
+            ps.setString(4, user.getPasswordSalt());
+            ps.setString(5, user.getFullName().trim());
+            ps.setString(6, dbRole);
+            ps.setBoolean(7, user.isActive());
+            ps.setLong(8, user.getId());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw translateAuthSqlException("Gagal memperbarui akun pengguna di database.", e);
+        }
+    }
+
+    @Override
     public void updateLastLogin(Long userId) {
         if (userId == null) {
             return;
@@ -188,6 +296,10 @@ public class PostgresAuthDAO implements AuthDAO {
     private static RuntimeException translateAuthSqlException(String contextMessage, SQLException e) {
         String sqlState = e.getSQLState();
         if ("23505".equals(sqlState)) {
+            String msg = e.getMessage() == null ? "" : e.getMessage().toLowerCase();
+            if (msg.contains("id_guru")) {
+                return new IllegalArgumentException("Profil guru ini sudah tertaut ke akun pengguna lain.", e);
+            }
             return new IllegalArgumentException("Username sudah terdaftar.", e);
         }
         if ("23503".equals(sqlState)) {

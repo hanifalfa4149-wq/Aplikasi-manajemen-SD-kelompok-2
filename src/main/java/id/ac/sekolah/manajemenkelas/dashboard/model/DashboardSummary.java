@@ -4,110 +4,109 @@ import java.math.BigDecimal;
 
 public class DashboardSummary {
 
-    private final String scopeLabel;
-    private final int totalActiveStudents;
-    private final int totalInactiveStudents;
-    private final int totalActiveTeachers;
-    private final int totalInactiveTeachers;
-    private final int totalActiveClasses;
-    private final int totalActiveSubjects;
-    private final String activeAcademicYearName;
-    private final int activeSemestersCount;
-    private final int activeHomeroomCount;
-    private final int activeTeachingAssignmentCount;
-    private final int totalAssessmentsCount;
-    private final int totalAttendanceRecords;
-    private final BigDecimal overallAttendancePercentage;
+    private final String labelCakupan;
+    private final int totalSiswaAktif;
+    private final int totalSiswaTidakAktif;
+    private final int totalGuruAktif;
+    private final int totalGuruTidakAktif;
+    private final int totalKelasAktif;
+    private final int totalMataPelajaranAktif;
+    private final String namaTahunAjaranAktif;
+    private final int jumlahSemesterAktif;
+    private final int jumlahWaliKelasAktif;
+    private final int jumlahPenugasanMengajarAktif;
+    private final int totalJumlahPenilaian;
+    private final int totalCatatanAbsensi;
+    private final BigDecimal persentaseKehadiranKeseluruhan;
 
     public DashboardSummary(
-            String scopeLabel,
-            int totalActiveStudents,
-            int totalInactiveStudents,
-            int totalActiveTeachers,
-            int totalInactiveTeachers,
-            int totalActiveClasses,
-            int totalActiveSubjects,
-            String activeAcademicYearName,
-            int activeSemestersCount,
-            int activeHomeroomCount,
-            int activeTeachingAssignmentCount,
-            int totalAssessmentsCount,
-            int totalAttendanceRecords,
-            BigDecimal overallAttendancePercentage) {
-        this.scopeLabel = scopeLabel;
-        this.totalActiveStudents = totalActiveStudents;
-        this.totalInactiveStudents = totalInactiveStudents;
-        this.totalActiveTeachers = totalActiveTeachers;
-        this.totalInactiveTeachers = totalInactiveTeachers;
-        this.totalActiveClasses = totalActiveClasses;
-        this.totalActiveSubjects = totalActiveSubjects;
-        this.activeAcademicYearName = activeAcademicYearName;
-        this.activeSemestersCount = activeSemestersCount;
-        this.activeHomeroomCount = activeHomeroomCount;
-        this.activeTeachingAssignmentCount = activeTeachingAssignmentCount;
-        this.totalAssessmentsCount = totalAssessmentsCount;
-        this.totalAttendanceRecords = totalAttendanceRecords;
-        this.overallAttendancePercentage = overallAttendancePercentage;
+            String labelCakupan,
+            int totalSiswaAktif,
+            int totalSiswaTidakAktif,
+            int totalGuruAktif,
+            int totalGuruTidakAktif,
+            int totalKelasAktif,
+            int totalMataPelajaranAktif,
+            String namaTahunAjaranAktif,
+            int jumlahSemesterAktif,
+            int jumlahWaliKelasAktif,
+            int jumlahPenugasanMengajarAktif,
+            int totalJumlahPenilaian,
+            int totalCatatanAbsensi,
+            BigDecimal persentaseKehadiranKeseluruhan) {
+        this.labelCakupan = labelCakupan;
+        this.totalSiswaAktif = totalSiswaAktif;
+        this.totalSiswaTidakAktif = totalSiswaTidakAktif;
+        this.totalGuruAktif = totalGuruAktif;
+        this.totalGuruTidakAktif = totalGuruTidakAktif;
+        this.totalKelasAktif = totalKelasAktif;
+        this.totalMataPelajaranAktif = totalMataPelajaranAktif;
+        this.namaTahunAjaranAktif = namaTahunAjaranAktif;
+        this.jumlahSemesterAktif = jumlahSemesterAktif;
+        this.jumlahWaliKelasAktif = jumlahWaliKelasAktif;
+        this.jumlahPenugasanMengajarAktif = jumlahPenugasanMengajarAktif;
+        this.totalJumlahPenilaian = totalJumlahPenilaian;
+        this.totalCatatanAbsensi = totalCatatanAbsensi;
+        this.persentaseKehadiranKeseluruhan = persentaseKehadiranKeseluruhan;
     }
 
     public String getScopeLabel() {
-        return scopeLabel;
+        return labelCakupan;
     }
 
     public int getTotalActiveStudents() {
-        return totalActiveStudents;
+        return totalSiswaAktif;
     }
 
     public int getTotalInactiveStudents() {
-        return totalInactiveStudents;
+        return totalSiswaTidakAktif;
     }
 
     public int getTotalActiveTeachers() {
-        return totalActiveTeachers;
+        return totalGuruAktif;
     }
 
     public int getTotalInactiveTeachers() {
-        return totalInactiveTeachers;
+        return totalGuruTidakAktif;
     }
 
     public int getTotalActiveClasses() {
-        return totalActiveClasses;
+        return totalKelasAktif;
     }
 
     public int getTotalActiveSubjects() {
-        return totalActiveSubjects;
+        return totalMataPelajaranAktif;
     }
 
     public String getActiveAcademicYearName() {
-        return activeAcademicYearName;
+        return namaTahunAjaranAktif;
     }
 
     public int getActiveSemestersCount() {
-        return activeSemestersCount;
+        return jumlahSemesterAktif;
     }
 
     public int getActiveHomeroomCount() {
-        return activeHomeroomCount;
+        return jumlahWaliKelasAktif;
     }
 
     public int getActiveTeachingAssignmentCount() {
-        return activeTeachingAssignmentCount;
+        return jumlahPenugasanMengajarAktif;
     }
 
     public int getTotalAssessmentsCount() {
-        return totalAssessmentsCount;
+        return totalJumlahPenilaian;
     }
 
     public int getTotalAttendanceRecords() {
-        return totalAttendanceRecords;
+        return totalCatatanAbsensi;
     }
 
     public BigDecimal getOverallAttendancePercentage() {
-        return overallAttendancePercentage;
+        return persentaseKehadiranKeseluruhan;
     }
 
     public boolean hasAttendanceData() {
-        return totalAttendanceRecords > 0 && overallAttendancePercentage != null;
+        return totalCatatanAbsensi > 0 && persentaseKehadiranKeseluruhan != null;
     }
 }
-

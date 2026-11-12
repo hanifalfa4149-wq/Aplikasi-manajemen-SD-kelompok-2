@@ -63,13 +63,24 @@ public class StatusBadge extends JLabel {
             return new StatusBadge("-", Style.NEUTRAL);
         }
         String normalized = value.trim().toUpperCase();
-        return switch (normalized) {
-            case "AKTIF", "HADIR", "LULUS", "POSTGRESQL" -> new StatusBadge(normalized, Style.SUCCESS);
-            case "SAKIT", "IZIN", "NAIK_KELAS", "INMEMORY" -> new StatusBadge(normalized, Style.WARNING);
-            case "NONAKTIF", "ALPA", "KELUAR" -> new StatusBadge(normalized, Style.DANGER);
-            case "PINDAH" -> new StatusBadge(normalized, Style.MINT);
-            default -> new StatusBadge(normalized, Style.MINT);
-        };
+        switch (normalized) {
+            case "AKTIF":
+            case "HADIR":
+            case "LULUS":
+            case "POSTGRESQL":
+                return new StatusBadge(normalized, Style.SUCCESS);
+            case "SAKIT":
+            case "IZIN":
+            case "NAIK_KELAS":
+                return new StatusBadge(normalized, Style.WARNING);
+            case "NONAKTIF":
+            case "ALPA":
+            case "KELUAR":
+                return new StatusBadge(normalized, Style.DANGER);
+            case "PINDAH":
+            default:
+                return new StatusBadge(normalized, Style.MINT);
+        }
     }
 
     public void setBadge(String text, Style style) {

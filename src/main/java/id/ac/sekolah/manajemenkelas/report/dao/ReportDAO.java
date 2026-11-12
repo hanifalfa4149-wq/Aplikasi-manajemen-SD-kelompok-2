@@ -15,28 +15,27 @@ import id.ac.sekolah.manajemenkelas.report.model.SubjectScoreReport;
 
 public interface ReportDAO {
 
-    DashboardSummary getDashboardSummary(Long teacherIdScope);
+    DashboardSummary getDashboardSummary(Long idCakupanGuru);
 
-    List<ClassStudentCountReport> findActiveStudentCountsByClass(Long teacherIdScope);
+    List<ClassStudentCountReport> findActiveStudentCountsByClass(Long idCakupanGuru);
 
-    List<GenderStudentCountReport> findActiveStudentCountsByGender(Long teacherIdScope);
+    List<GenderStudentCountReport> findActiveStudentCountsByGender(Long idCakupanGuru);
 
     AttendanceRangeReport findAttendanceSummaryByDateRange(
-            LocalDate startDate,
-            LocalDate endDate,
-            Long teacherIdScope);
+            LocalDate tanggalMulai,
+            LocalDate tanggalSelesai,
+            Long idCakupanGuru);
 
     List<ClassAttendanceReport> findAttendanceSummariesByClass(
-            LocalDate startDate,
-            LocalDate endDate,
-            Long teacherIdScope);
+            LocalDate tanggalMulai,
+            LocalDate tanggalSelesai,
+            Long idCakupanGuru);
 
-    List<AssessmentReport> findAssessmentSummaries(Long teacherIdScope);
+    List<AssessmentReport> findAssessmentSummaries(Long idCakupanGuru);
 
-    List<StudentScoreReport> findStudentScoreSummaries(Long teacherIdScope);
+    List<StudentScoreReport> findStudentScoreSummaries(Long idCakupanGuru);
 
-    Optional<StudentScoreReport> findStudentScoreSummaryByStudentId(Long studentId, Long teacherIdScope);
+    Optional<StudentScoreReport> findStudentScoreSummaryByStudentId(Long idSiswa, Long idCakupanGuru);
 
-    List<SubjectScoreReport> findAverageScoresBySubject(Long teacherIdScope);
+    List<SubjectScoreReport> findAverageScoresBySubject(Long idCakupanGuru);
 }
-

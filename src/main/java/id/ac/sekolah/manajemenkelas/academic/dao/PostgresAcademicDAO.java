@@ -374,30 +374,49 @@ public class PostgresAcademicDAO implements AcademicDAO {
             throw new IllegalArgumentException("Data tahun ajaran tidak boleh null.");
         }
 
-        JdbcUtils.inTransactionVoid(conn -> {
-            try {
-                if (academicYear.isActive()) {
-                    try (PreparedStatement deactivatePs = conn.prepareStatement(SQL_DEACTIVATE_OTHER_YEARS)) {
-                        deactivatePs.executeUpdate();
-                    }
-                }
+        Connection koneksi = null;
+        boolean autoCommitAwal = true;
+        try {
+            koneksi = DatabaseConfig.getConnection();
+            autoCommitAwal = koneksi.getAutoCommit();
+            koneksi.setAutoCommit(false);
 
-                try (PreparedStatement insertPs = conn.prepareStatement(SQL_INSERT_YEAR)) {
-                    insertPs.setString(1, academicYear.getName().trim());
-                    insertPs.setDate(2, Date.valueOf(academicYear.getStartDate()));
-                    insertPs.setDate(3, Date.valueOf(academicYear.getEndDate()));
-                    insertPs.setBoolean(4, academicYear.isActive());
-
-                    try (ResultSet rs = insertPs.executeQuery()) {
-                        if (rs.next()) {
-                            academicYear.setId(rs.getLong(1));
-                        }
-                    }
+            if (academicYear.isActive()) {
+                try (PreparedStatement deactivatePs = koneksi.prepareStatement(SQL_DEACTIVATE_OTHER_YEARS)) {
+                    deactivatePs.executeUpdate();
                 }
-            } catch (SQLException e) {
-                throw translateAcademicSqlException("Gagal menyimpan tahun ajaran.", e);
             }
-        });
+
+            try (PreparedStatement insertPs = koneksi.prepareStatement(SQL_INSERT_YEAR)) {
+                insertPs.setString(1, academicYear.getName().trim());
+                insertPs.setDate(2, Date.valueOf(academicYear.getStartDate()));
+                insertPs.setDate(3, Date.valueOf(academicYear.getEndDate()));
+                insertPs.setBoolean(4, academicYear.isActive());
+
+                try (ResultSet rs = insertPs.executeQuery()) {
+                    if (rs.next()) {
+                        academicYear.setId(rs.getLong(1));
+                    }
+                }
+            }
+
+            koneksi.commit();
+        } catch (SQLException e) {
+            JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+            throw translateAcademicSqlException("Gagal menyimpan tahun ajaran.", e);
+        } catch (RuntimeException e) {
+            JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+            throw e;
+        } finally {
+            JdbcUtils.pulihkanAutoCommitDenganAman(koneksi, autoCommitAwal);
+            if (koneksi != null) {
+                try {
+                    koneksi.close();
+                } catch (SQLException ignored) {
+                    // Abaikan kegagalan menutup koneksi saat cleanup
+                }
+            }
+        }
     }
 
     @Override
@@ -406,31 +425,50 @@ public class PostgresAcademicDAO implements AcademicDAO {
             throw new IllegalArgumentException("ID tahun ajaran wajib diisi untuk pembaruan.");
         }
 
-        JdbcUtils.inTransactionVoid(conn -> {
-            try {
-                if (academicYear.isActive()) {
-                    try (PreparedStatement deactivatePs = conn.prepareStatement(SQL_DEACTIVATE_OTHER_YEARS_EXCEPT)) {
-                        deactivatePs.setLong(1, academicYear.getId());
-                        deactivatePs.executeUpdate();
-                    }
-                }
+        Connection koneksi = null;
+        boolean autoCommitAwal = true;
+        try {
+            koneksi = DatabaseConfig.getConnection();
+            autoCommitAwal = koneksi.getAutoCommit();
+            koneksi.setAutoCommit(false);
 
-                try (PreparedStatement updatePs = conn.prepareStatement(SQL_UPDATE_YEAR)) {
-                    updatePs.setString(1, academicYear.getName().trim());
-                    updatePs.setDate(2, Date.valueOf(academicYear.getStartDate()));
-                    updatePs.setDate(3, Date.valueOf(academicYear.getEndDate()));
-                    updatePs.setBoolean(4, academicYear.isActive());
-                    updatePs.setLong(5, academicYear.getId());
-
-                    int affected = updatePs.executeUpdate();
-                    if (affected == 0) {
-                        throw new IllegalArgumentException("Tahun ajaran tidak ditemukan.");
-                    }
+            if (academicYear.isActive()) {
+                try (PreparedStatement deactivatePs = koneksi.prepareStatement(SQL_DEACTIVATE_OTHER_YEARS_EXCEPT)) {
+                    deactivatePs.setLong(1, academicYear.getId());
+                    deactivatePs.executeUpdate();
                 }
-            } catch (SQLException e) {
-                throw translateAcademicSqlException("Gagal memperbarui tahun ajaran.", e);
             }
-        });
+
+            try (PreparedStatement updatePs = koneksi.prepareStatement(SQL_UPDATE_YEAR)) {
+                updatePs.setString(1, academicYear.getName().trim());
+                updatePs.setDate(2, Date.valueOf(academicYear.getStartDate()));
+                updatePs.setDate(3, Date.valueOf(academicYear.getEndDate()));
+                updatePs.setBoolean(4, academicYear.isActive());
+                updatePs.setLong(5, academicYear.getId());
+
+                int affected = updatePs.executeUpdate();
+                if (affected == 0) {
+                    throw new IllegalArgumentException("Tahun ajaran tidak ditemukan.");
+                }
+            }
+
+            koneksi.commit();
+        } catch (SQLException e) {
+            JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+            throw translateAcademicSqlException("Gagal memperbarui tahun ajaran.", e);
+        } catch (RuntimeException e) {
+            JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+            throw e;
+        } finally {
+            JdbcUtils.pulihkanAutoCommitDenganAman(koneksi, autoCommitAwal);
+            if (koneksi != null) {
+                try {
+                    koneksi.close();
+                } catch (SQLException ignored) {
+                    // Abaikan kegagalan menutup koneksi saat cleanup
+                }
+            }
+        }
     }
 
     // ==========================================
@@ -1087,14 +1125,33 @@ public class PostgresAcademicDAO implements AcademicDAO {
             throw new IllegalArgumentException("Data transisi penempatan siswa tidak valid.");
         }
 
-        JdbcUtils.inTransactionVoid(conn -> {
-            try {
-                updatePlacement(conn, previousPlacement);
-                insertPlacement(conn, newPlacement);
-            } catch (SQLException e) {
-                throw translateAcademicSqlException("Gagal memindahkan atau menaikkan kelas siswa.", e);
+        Connection koneksi = null;
+        boolean autoCommitAwal = true;
+        try {
+            koneksi = DatabaseConfig.getConnection();
+            autoCommitAwal = koneksi.getAutoCommit();
+            koneksi.setAutoCommit(false);
+
+            updatePlacement(koneksi, previousPlacement);
+            insertPlacement(koneksi, newPlacement);
+
+            koneksi.commit();
+        } catch (SQLException e) {
+            JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+            throw translateAcademicSqlException("Gagal memindahkan atau menaikkan kelas siswa.", e);
+        } catch (RuntimeException e) {
+            JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+            throw e;
+        } finally {
+            JdbcUtils.pulihkanAutoCommitDenganAman(koneksi, autoCommitAwal);
+            if (koneksi != null) {
+                try {
+                    koneksi.close();
+                } catch (SQLException ignored) {
+                    // Abaikan kegagalan menutup koneksi saat cleanup
+                }
             }
-        });
+        }
     }
 
     private void insertPlacement(Connection conn, StudentPlacement placement) throws SQLException {

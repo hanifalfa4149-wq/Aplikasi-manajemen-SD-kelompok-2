@@ -228,9 +228,15 @@ public class AttendancePanel extends JPanel implements ScreenPage {
 
     private Void loadReferenceMetadata() {
         SessionContext session = container.getSessionContext();
-        List<SchoolClass> allClasses = container.getAcademicService().getAllClasses().stream()
-                .filter(SchoolClass::isActive)
-                .toList();
+        List<SchoolClass> daftarSemuaKelas = container.getAcademicService().getAllClasses();
+        List<SchoolClass> allClasses = new ArrayList<>();
+        Map<Long, String> cMap = new HashMap<>();
+        for (SchoolClass kelas : daftarSemuaKelas) {
+            cMap.put(kelas.getId(), kelas.getName());
+            if (kelas.isActive()) {
+                allClasses.add(kelas);
+            }
+        }
 
         List<SchoolClass> scopedClasses;
         if (session.hasRole(RoleMapper.ROLE_ADMIN)) {
@@ -248,17 +254,40 @@ public class AttendancePanel extends JPanel implements ScreenPage {
                     allowedIds.add(t.getClassId());
                 }
             }
-            scopedClasses = allClasses.stream().filter(c -> allowedIds.contains(c.getId())).toList();
+            scopedClasses = new ArrayList<>();
+            for (SchoolClass kelas : allClasses) {
+                if (allowedIds.contains(kelas.getId())) {
+                    scopedClasses.add(kelas);
+                }
+            }
         }
 
-        List<Student> students = container.getStudentService().getAllStudents().stream()
-                .filter(Student::isActive)
-                .toList();
-
+        List<Student> allActiveStudents = new ArrayList<>();
         Map<Long, Student> sMap = new HashMap<>();
-        students.forEach(s -> sMap.put(s.getId(), s));
-        Map<Long, String> cMap = new HashMap<>();
-        container.getAcademicService().getAllClasses().forEach(c -> cMap.put(c.getId(), c.getName()));
+        for (Student siswa : container.getStudentService().getAllStudents()) {
+            if (siswa.isActive()) {
+                allActiveStudents.add(siswa);
+                sMap.put(siswa.getId(), siswa);
+            }
+        }
+
+        List<Student> students;
+        if (session.hasRole(RoleMapper.ROLE_ADMIN)) {
+            students = allActiveStudents;
+        } else {
+            Set<Long> idSiswaCakupan = new HashSet<>();
+            for (SchoolClass kelas : scopedClasses) {
+                for (StudentPlacement p : container.getAcademicService().getActivePlacementsByClass(kelas.getId())) {
+                    idSiswaCakupan.add(p.getStudentId());
+                }
+            }
+            students = new ArrayList<>();
+            for (Student siswa : allActiveStudents) {
+                if (idSiswaCakupan.contains(siswa.getId())) {
+                    students.add(siswa);
+                }
+            }
+        }
 
         this.authorizedClasses = scopedClasses;
         this.allStudents = students;
@@ -298,6 +327,12 @@ public class AttendancePanel extends JPanel implements ScreenPage {
             stateDeck.showEmpty("Tidak ada kelas dalam cakupan", "Belum ada kelas aktif yang dapat diakses untuk absensi.");
             return;
         }
+        if (mode == ViewMode.STUDENT_HISTORY && allStudents.isEmpty()) {
+            currentRows = List.of();
+            updateStatsFromRows(currentRows);
+            stateDeck.showEmpty("Belum ada siswa dalam cakupan", "Belum ada siswa aktif pada kelas yang Anda ampu.");
+            return;
+        }
 
         Long classId = getSelectedClassId();
         Long studentId = getSelectedStudentId();
@@ -310,22 +345,31 @@ public class AttendancePanel extends JPanel implements ScreenPage {
                     List<Attendance> rows;
                     AttendanceSummary summary = null;
                     switch (mode) {
-                        case CLASS_AND_DATE -> rows = service.getAttendanceByClassAndDate(classId, start);
-                        case CLASS_ALL -> rows = service.getAttendanceByClass(classId);
-                        case STUDENT_HISTORY -> {
+                        case CLASS_AND_DATE:
+                            rows = service.getAttendanceByClassAndDate(classId, start);
+                            break;
+                        case CLASS_ALL:
+                            rows = service.getAttendanceByClass(classId);
+                            break;
+                        case STUDENT_HISTORY:
                             if (studentId == null) {
                                 throw new IllegalArgumentException("Pilih siswa terlebih dahulu.");
                             }
                             rows = service.getAttendanceByStudent(studentId);
-                        }
-                        case CLASS_RANGE -> {
+                            break;
+                        case CLASS_RANGE:
                             summary = service.getClassAttendanceSummary(classId, start, end);
-                            rows = service.getAttendanceByClass(classId).stream()
-                                    .filter(a -> !a.getAttendanceDate().isBefore(start)
-                                            && !a.getAttendanceDate().isAfter(end))
-                                    .toList();
-                        }
-                        default -> rows = List.of();
+                            rows = new ArrayList<>();
+                            for (Attendance a : service.getAttendanceByClass(classId)) {
+                                if (!a.getAttendanceDate().isBefore(start)
+                                        && !a.getAttendanceDate().isAfter(end)) {
+                                    rows.add(a);
+                                }
+                            }
+                            break;
+                        default:
+                            rows = new ArrayList<>();
+                            break;
                     }
                     return new Object[]{rows, summary};
                 },
@@ -371,12 +415,20 @@ public class AttendancePanel extends JPanel implements ScreenPage {
         int h = 0, s = 0, i = 0, a = 0;
         for (Attendance r : rows) {
             switch (r.getStatus()) {
-                case Attendance.STATUS_HADIR -> h++;
-                case Attendance.STATUS_SAKIT -> s++;
-                case Attendance.STATUS_IZIN -> i++;
-                case Attendance.STATUS_ALPA -> a++;
-                default -> {
-                }
+                case Attendance.STATUS_HADIR:
+                    h++;
+                    break;
+                case Attendance.STATUS_SAKIT:
+                    s++;
+                    break;
+                case Attendance.STATUS_IZIN:
+                    i++;
+                    break;
+                case Attendance.STATUS_ALPA:
+                    a++;
+                    break;
+                default:
+                    break;
             }
         }
         applySummaryStats(rows.size(), h, s, i, a);
@@ -476,7 +528,9 @@ public class AttendancePanel extends JPanel implements ScreenPage {
             super(owner, "Input Absensi Kelas (Massal)", "Simpan Absensi Kelas", 700, 540);
             this.container = container;
             this.studentMap = studentMap;
-            classes.forEach(c -> classCombo.addItem(new SelectItem<>(c, "Kelas " + c.getName())));
+            for (SchoolClass c : classes) {
+                classCombo.addItem(new SelectItem<>(c, "Kelas " + c.getName()));
+            }
             if (initialClassId != null) {
                 for (int i = 0; i < classCombo.getItemCount(); i++) {
                     if (classCombo.getItemAt(i).getValue().getId().equals(initialClassId)) {
@@ -600,7 +654,9 @@ public class AttendancePanel extends JPanel implements ScreenPage {
             super(owner, "Catat Absensi Siswa", "Simpan Absensi", 540, 440);
             this.container = container;
             this.studentMap = studentMap;
-            classes.forEach(c -> classCombo.addItem(new SelectItem<>(c, "Kelas " + c.getName())));
+            for (SchoolClass c : classes) {
+                classCombo.addItem(new SelectItem<>(c, "Kelas " + c.getName()));
+            }
             if (initialClassId != null) {
                 for (int i = 0; i < classCombo.getItemCount(); i++) {
                     if (classCombo.getItemAt(i).getValue().getId().equals(initialClassId)) {

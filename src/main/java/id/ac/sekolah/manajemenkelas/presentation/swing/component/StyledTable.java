@@ -190,12 +190,24 @@ public class StyledTable extends JTable {
             if (text == null) {
                 return StatusBadge.Style.NEUTRAL;
             }
-            return switch (text.trim().toUpperCase()) {
-                case "AKTIF", "HADIR", "LULUS", "POSTGRESQL" -> StatusBadge.Style.SUCCESS;
-                case "SAKIT", "IZIN", "NAIK_KELAS", "INMEMORY" -> StatusBadge.Style.WARNING;
-                case "NONAKTIF", "ALPA", "KELUAR" -> StatusBadge.Style.DANGER;
-                default -> StatusBadge.Style.MINT;
-            };
+            String teks = text.trim().toUpperCase();
+            switch (teks) {
+                case "AKTIF":
+                case "HADIR":
+                case "LULUS":
+                case "POSTGRESQL":
+                    return StatusBadge.Style.SUCCESS;
+                case "SAKIT":
+                case "IZIN":
+                case "NAIK_KELAS":
+                    return StatusBadge.Style.WARNING;
+                case "NONAKTIF":
+                case "ALPA":
+                case "KELUAR":
+                    return StatusBadge.Style.DANGER;
+                default:
+                    return StatusBadge.Style.MINT;
+            }
         }
     }
 

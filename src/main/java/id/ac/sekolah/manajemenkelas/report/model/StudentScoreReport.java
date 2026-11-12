@@ -4,39 +4,39 @@ import java.math.BigDecimal;
 
 public class StudentScoreReport {
 
-    private final Long studentId;
+    private final Long idSiswa;
     private final String nis;
-    private final String studentName;
-    private final String currentClassName;
-    private final int assessmentCount;
-    private final BigDecimal totalEarnedScore;
-    private final BigDecimal totalMaxScore;
-    private final BigDecimal averageScore;
-    private final BigDecimal overallPercentage;
+    private final String namaSiswa;
+    private final String namaKelasSaatIni;
+    private final int jumlahPenilaian;
+    private final BigDecimal totalNilaiDiperoleh;
+    private final BigDecimal totalNilaiMaksimal;
+    private final BigDecimal rataRataNilai;
+    private final BigDecimal persentaseKeseluruhan;
 
     public StudentScoreReport(
-            Long studentId,
+            Long idSiswa,
             String nis,
-            String studentName,
-            String currentClassName,
-            int assessmentCount,
-            BigDecimal totalEarnedScore,
-            BigDecimal totalMaxScore,
-            BigDecimal averageScore,
-            BigDecimal overallPercentage) {
-        this.studentId = studentId;
+            String namaSiswa,
+            String namaKelasSaatIni,
+            int jumlahPenilaian,
+            BigDecimal totalNilaiDiperoleh,
+            BigDecimal totalNilaiMaksimal,
+            BigDecimal rataRataNilai,
+            BigDecimal persentaseKeseluruhan) {
+        this.idSiswa = idSiswa;
         this.nis = nis;
-        this.studentName = studentName;
-        this.currentClassName = currentClassName;
-        this.assessmentCount = assessmentCount;
-        this.totalEarnedScore = totalEarnedScore;
-        this.totalMaxScore = totalMaxScore;
-        this.averageScore = averageScore;
-        this.overallPercentage = overallPercentage;
+        this.namaSiswa = namaSiswa;
+        this.namaKelasSaatIni = namaKelasSaatIni;
+        this.jumlahPenilaian = jumlahPenilaian;
+        this.totalNilaiDiperoleh = totalNilaiDiperoleh;
+        this.totalNilaiMaksimal = totalNilaiMaksimal;
+        this.rataRataNilai = rataRataNilai;
+        this.persentaseKeseluruhan = persentaseKeseluruhan;
     }
 
     public Long getStudentId() {
-        return studentId;
+        return idSiswa;
     }
 
     public String getNis() {
@@ -44,35 +44,34 @@ public class StudentScoreReport {
     }
 
     public String getStudentName() {
-        return studentName;
+        return namaSiswa;
     }
 
     public String getCurrentClassName() {
-        return currentClassName;
+        return namaKelasSaatIni;
     }
 
     public int getAssessmentCount() {
-        return assessmentCount;
+        return jumlahPenilaian;
     }
 
     public BigDecimal getTotalEarnedScore() {
-        return totalEarnedScore;
+        return totalNilaiDiperoleh;
     }
 
     public BigDecimal getTotalMaxScore() {
-        return totalMaxScore;
+        return totalNilaiMaksimal;
     }
 
     public BigDecimal getAverageScore() {
-        return averageScore;
+        return rataRataNilai;
     }
 
     public BigDecimal getOverallPercentage() {
-        return overallPercentage;
+        return persentaseKeseluruhan;
     }
 
     public boolean hasScores() {
-        return assessmentCount > 0 && overallPercentage != null;
+        return jumlahPenilaian > 0 && persentaseKeseluruhan != null;
     }
 }
-

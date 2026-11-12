@@ -8,30 +8,29 @@ import id.ac.sekolah.manajemenkelas.assessment.model.StudentScore;
 
 public interface AssessmentDAO {
 
-    // Assessment
+    // Penilaian (Assessment)
     List<Assessment> findAllAssessments();
 
     Optional<Assessment> findAssessmentById(Long id);
 
-    List<Assessment> findAssessmentsByTeachingAssignmentId(Long teachingAssignmentId);
+    List<Assessment> findAssessmentsByTeachingAssignmentId(Long idPenugasanMengajar);
 
-    void saveAssessment(Assessment assessment);
+    void saveAssessment(Assessment penilaian);
 
-    void updateAssessment(Assessment assessment);
+    void updateAssessment(Assessment penilaian);
 
-    // Student Score
+    // Nilai Siswa (Student Score)
     Optional<StudentScore> findScoreById(Long id);
 
-    Optional<StudentScore> findScoreByAssessmentAndStudent(Long assessmentId, Long studentId);
+    Optional<StudentScore> findScoreByAssessmentAndStudent(Long idPenilaian, Long idSiswa);
 
-    List<StudentScore> findScoresByAssessmentId(Long assessmentId);
+    List<StudentScore> findScoresByAssessmentId(Long idPenilaian);
 
-    List<StudentScore> findScoresByStudentId(Long studentId);
+    List<StudentScore> findScoresByStudentId(Long idSiswa);
 
-    void saveScore(StudentScore score);
+    void saveScore(StudentScore nilaiSiswa);
 
-    void saveAllScores(List<StudentScore> scores);
+    void saveAllScores(List<StudentScore> daftarNilaiSiswa);
 
-    void updateScore(StudentScore score);
+    void updateScore(StudentScore nilaiSiswa);
 }
-

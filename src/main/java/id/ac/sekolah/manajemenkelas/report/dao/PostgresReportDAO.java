@@ -27,13 +27,13 @@ import id.ac.sekolah.manajemenkelas.report.model.SubjectScoreReport;
  */
 public class PostgresReportDAO implements ReportDAO {
 
-    private static final String TEACHER_CLASS_IDS_SQL = """
+    private static final String SQL_ID_KELAS_GURU = """
             SELECT id_kelas FROM penugasan_wali_kelas WHERE id_guru = ? AND aktif = TRUE
             UNION
             SELECT id_kelas FROM penugasan_mengajar WHERE id_guru = ? AND aktif = TRUE
             """;
 
-    private static final String SQL_CLASS_STUDENT_COUNTS_ADMIN = """
+    private static final String SQL_JUMLAH_SISWA_KELAS_ADMIN = """
             SELECT k.id,
                    k.nama,
                    k.tingkat_kelas,
@@ -54,7 +54,7 @@ public class PostgresReportDAO implements ReportDAO {
             ORDER BY k.tingkat_kelas ASC, k.nama ASC, k.id ASC
             """;
 
-    private static final String SQL_CLASS_STUDENT_COUNTS_TEACHER = """
+    private static final String SQL_JUMLAH_SISWA_KELAS_GURU = """
             SELECT k.id,
                    k.nama,
                    k.tingkat_kelas,
@@ -80,7 +80,7 @@ public class PostgresReportDAO implements ReportDAO {
             ORDER BY k.tingkat_kelas ASC, k.nama ASC, k.id ASC
             """;
 
-    private static final String SQL_GENDER_COUNTS_ADMIN = """
+    private static final String SQL_JUMLAH_GENDER_ADMIN = """
             WITH genders(db_val, code, label, sort_ord) AS (
                 VALUES ('LAKI_LAKI', 'L', 'Laki-laki', 1),
                        ('PEREMPUAN', 'P', 'Perempuan', 2)
@@ -96,7 +96,7 @@ public class PostgresReportDAO implements ReportDAO {
             ORDER BY g.sort_ord ASC
             """;
 
-    private static final String SQL_GENDER_COUNTS_TEACHER = """
+    private static final String SQL_JUMLAH_GENDER_GURU = """
             WITH genders(db_val, code, label, sort_ord) AS (
                 VALUES ('LAKI_LAKI', 'L', 'Laki-laki', 1),
                        ('PEREMPUAN', 'P', 'Perempuan', 2)
@@ -125,7 +125,7 @@ public class PostgresReportDAO implements ReportDAO {
             ORDER BY g.sort_ord ASC
             """;
 
-    private static final String SQL_ATTENDANCE_RANGE_ADMIN = """
+    private static final String SQL_ABSENSI_RENTANG_ADMIN = """
             SELECT COUNT(*) AS total_records,
                    COUNT(*) FILTER (WHERE status = 'HADIR') AS hadir_count,
                    COUNT(*) FILTER (WHERE status = 'SAKIT') AS sakit_count,
@@ -140,7 +140,7 @@ public class PostgresReportDAO implements ReportDAO {
             WHERE tanggal_absensi BETWEEN ? AND ?
             """;
 
-    private static final String SQL_ATTENDANCE_RANGE_TEACHER = """
+    private static final String SQL_ABSENSI_RENTANG_GURU = """
             SELECT COUNT(*) AS total_records,
                    COUNT(*) FILTER (WHERE status = 'HADIR') AS hadir_count,
                    COUNT(*) FILTER (WHERE status = 'SAKIT') AS sakit_count,
@@ -160,7 +160,7 @@ public class PostgresReportDAO implements ReportDAO {
               )
             """;
 
-    private static final String SQL_ASSESSMENT_SUMMARIES_ADMIN = """
+    private static final String SQL_RINGKASAN_PENILAIAN_ADMIN = """
             SELECT p.id,
                    p.id_penugasan_mengajar,
                    k.nama AS class_name,
@@ -188,7 +188,7 @@ public class PostgresReportDAO implements ReportDAO {
             ORDER BY p.tanggal_penilaian DESC, p.id DESC
             """;
 
-    private static final String SQL_ASSESSMENT_SUMMARIES_TEACHER = """
+    private static final String SQL_RINGKASAN_PENILAIAN_GURU = """
             SELECT p.id,
                    p.id_penugasan_mengajar,
                    k.nama AS class_name,
@@ -217,7 +217,7 @@ public class PostgresReportDAO implements ReportDAO {
             ORDER BY p.tanggal_penilaian DESC, p.id DESC
             """;
 
-    private static final String SQL_SUBJECT_AVERAGE_ADMIN = """
+    private static final String SQL_RATA_RATA_MAPEL_ADMIN = """
             SELECT mp.id,
                    mp.kode,
                    mp.nama,
@@ -238,7 +238,7 @@ public class PostgresReportDAO implements ReportDAO {
             ORDER BY mp.nama ASC, mp.id ASC
             """;
 
-    private static final String SQL_SUBJECT_AVERAGE_TEACHER = """
+    private static final String SQL_RATA_RATA_MAPEL_GURU = """
             SELECT mp.id,
                    mp.kode,
                    mp.nama,
@@ -264,20 +264,20 @@ public class PostgresReportDAO implements ReportDAO {
             """;
 
     @Override
-    public DashboardSummary getDashboardSummary(Long teacherIdScope) {
-        try (Connection conn = DatabaseConfig.getConnection()) {
-            int activeStudents = 0;
-            int inactiveStudents = 0;
-            if (teacherIdScope == null) {
-                try (PreparedStatement ps = conn.prepareStatement("""
+    public DashboardSummary getDashboardSummary(Long idCakupanGuru) {
+        try (Connection koneksi = DatabaseConfig.getConnection()) {
+            int siswaAktif = 0;
+            int siswaTidakAktif = 0;
+            if (idCakupanGuru == null) {
+                try (PreparedStatement pernyataan = koneksi.prepareStatement("""
                         SELECT COUNT(*) FILTER (WHERE aktif = TRUE) AS active_cnt,
                                COUNT(*) FILTER (WHERE aktif = FALSE) AS inactive_cnt
                         FROM siswa
                         """);
-                     ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        activeStudents = rs.getInt("active_cnt");
-                        inactiveStudents = rs.getInt("inactive_cnt");
+                     ResultSet hasilQuery = pernyataan.executeQuery()) {
+                    if (hasilQuery.next()) {
+                        siswaAktif = hasilQuery.getInt("active_cnt");
+                        siswaTidakAktif = hasilQuery.getInt("inactive_cnt");
                     }
                 }
             } else {
@@ -289,229 +289,234 @@ public class PostgresReportDAO implements ReportDAO {
                           ON rks.id_siswa = s.id
                          AND rks.status = 'AKTIF'
                          AND rks.tanggal_keluar IS NULL
-                        WHERE rks.id_kelas IN (""" + TEACHER_CLASS_IDS_SQL + ")";
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setLong(1, teacherIdScope);
-                    ps.setLong(2, teacherIdScope);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (rs.next()) {
-                            activeStudents = rs.getInt("active_cnt");
-                            inactiveStudents = rs.getInt("inactive_cnt");
+                        WHERE rks.id_kelas IN (""" + SQL_ID_KELAS_GURU + ")";
+                try (PreparedStatement pernyataan = koneksi.prepareStatement(sql)) {
+                    pernyataan.setLong(1, idCakupanGuru);
+                    pernyataan.setLong(2, idCakupanGuru);
+                    try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                        if (hasilQuery.next()) {
+                            siswaAktif = hasilQuery.getInt("active_cnt");
+                            siswaTidakAktif = hasilQuery.getInt("inactive_cnt");
                         }
                     }
                 }
             }
 
-            int activeTeachers = 0;
-            int inactiveTeachers = 0;
-            if (teacherIdScope == null) {
-                try (PreparedStatement ps = conn.prepareStatement("""
+            int guruAktif = 0;
+            int guruTidakAktif = 0;
+            if (idCakupanGuru == null) {
+                try (PreparedStatement pernyataan = koneksi.prepareStatement("""
                         SELECT COUNT(*) FILTER (WHERE aktif = TRUE) AS active_cnt,
                                COUNT(*) FILTER (WHERE aktif = FALSE) AS inactive_cnt
                         FROM guru
                         """);
-                     ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        activeTeachers = rs.getInt("active_cnt");
-                        inactiveTeachers = rs.getInt("inactive_cnt");
+                     ResultSet hasilQuery = pernyataan.executeQuery()) {
+                    if (hasilQuery.next()) {
+                        guruAktif = hasilQuery.getInt("active_cnt");
+                        guruTidakAktif = hasilQuery.getInt("inactive_cnt");
                     }
                 }
             } else {
-                try (PreparedStatement ps = conn.prepareStatement("""
+                try (PreparedStatement pernyataan = koneksi.prepareStatement("""
                         SELECT COUNT(*) FILTER (WHERE aktif = TRUE) AS active_cnt,
                                COUNT(*) FILTER (WHERE aktif = FALSE) AS inactive_cnt
                         FROM guru
                         WHERE id = ?
                         """)) {
-                    ps.setLong(1, teacherIdScope);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (rs.next()) {
-                            activeTeachers = rs.getInt("active_cnt");
-                            inactiveTeachers = rs.getInt("inactive_cnt");
+                    pernyataan.setLong(1, idCakupanGuru);
+                    try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                        if (hasilQuery.next()) {
+                            guruAktif = hasilQuery.getInt("active_cnt");
+                            guruTidakAktif = hasilQuery.getInt("inactive_cnt");
                         }
                     }
                 }
             }
 
-            int activeClasses = 0;
-            if (teacherIdScope == null) {
-                activeClasses = querySingleInt(conn, "SELECT COUNT(*) FROM kelas WHERE aktif = TRUE");
+            int kelasAktif = 0;
+            if (idCakupanGuru == null) {
+                kelasAktif = kueriSatuInteger(koneksi, "SELECT COUNT(*) FROM kelas WHERE aktif = TRUE");
             } else {
                 String sql = "SELECT COUNT(*) FROM kelas WHERE aktif = TRUE AND id IN ("
-                        + TEACHER_CLASS_IDS_SQL + ")";
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setLong(1, teacherIdScope);
-                    ps.setLong(2, teacherIdScope);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (rs.next()) {
-                            activeClasses = rs.getInt(1);
+                        + SQL_ID_KELAS_GURU + ")";
+                try (PreparedStatement pernyataan = koneksi.prepareStatement(sql)) {
+                    pernyataan.setLong(1, idCakupanGuru);
+                    pernyataan.setLong(2, idCakupanGuru);
+                    try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                        if (hasilQuery.next()) {
+                            kelasAktif = hasilQuery.getInt(1);
                         }
                     }
                 }
             }
 
-            int activeSubjects;
-            if (teacherIdScope == null) {
-                activeSubjects = querySingleInt(conn, "SELECT COUNT(*) FROM mata_pelajaran WHERE aktif = TRUE");
+            int mapelAktif = 0;
+            if (idCakupanGuru == null) {
+                mapelAktif = kueriSatuInteger(koneksi, "SELECT COUNT(*) FROM mata_pelajaran WHERE aktif = TRUE");
             } else {
-                try (PreparedStatement ps = conn.prepareStatement("""
+                try (PreparedStatement pernyataan = koneksi.prepareStatement("""
                         SELECT COUNT(DISTINCT mp.id)
                         FROM mata_pelajaran mp
                         JOIN penugasan_mengajar pm ON pm.id_mata_pelajaran = mp.id
                         WHERE mp.aktif = TRUE AND pm.aktif = TRUE AND pm.id_guru = ?
                         """)) {
-                    ps.setLong(1, teacherIdScope);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        activeSubjects = rs.next() ? rs.getInt(1) : 0;
+                    pernyataan.setLong(1, idCakupanGuru);
+                    try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                        if (hasilQuery.next()) {
+                            mapelAktif = hasilQuery.getInt(1);
+                        }
                     }
                 }
             }
 
-            String activeYearName = "-";
-            try (PreparedStatement ps = conn.prepareStatement(
+            String namaTahunAktif = "-";
+            try (PreparedStatement pernyataan = koneksi.prepareStatement(
                     "SELECT nama FROM tahun_ajaran WHERE aktif = TRUE LIMIT 1");
-                 ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    activeYearName = rs.getString("nama");
+                 ResultSet hasilQuery = pernyataan.executeQuery()) {
+                if (hasilQuery.next()) {
+                    namaTahunAktif = hasilQuery.getString("nama");
                 }
             }
 
-            int activeSemesters = querySingleInt(conn, "SELECT COUNT(*) FROM semester WHERE aktif = TRUE");
+            int jumlahSemesterAktif = kueriSatuInteger(koneksi, "SELECT COUNT(*) FROM semester WHERE aktif = TRUE");
 
-            int homeroomCount;
-            int teachingCount;
-            int assessmentsCount;
-            if (teacherIdScope == null) {
-                homeroomCount = querySingleInt(conn,
+            int jumlahWaliKelas;
+            int jumlahPenugasanMengajar;
+            int jumlahPenilaian;
+            if (idCakupanGuru == null) {
+                jumlahWaliKelas = kueriSatuInteger(koneksi,
                         "SELECT COUNT(*) FROM penugasan_wali_kelas WHERE aktif = TRUE");
-                teachingCount = querySingleInt(conn,
+                jumlahPenugasanMengajar = kueriSatuInteger(koneksi,
                         "SELECT COUNT(*) FROM penugasan_mengajar WHERE aktif = TRUE");
-                assessmentsCount = querySingleInt(conn, "SELECT COUNT(*) FROM penilaian");
+                jumlahPenilaian = kueriSatuInteger(koneksi, "SELECT COUNT(*) FROM penilaian");
             } else {
-                homeroomCount = querySingleIntWithLong(conn,
+                jumlahWaliKelas = kueriSatuIntegerDenganLong(koneksi,
                         "SELECT COUNT(*) FROM penugasan_wali_kelas WHERE aktif = TRUE AND id_guru = ?",
-                        teacherIdScope);
-                teachingCount = querySingleIntWithLong(conn,
+                        idCakupanGuru);
+                jumlahPenugasanMengajar = kueriSatuIntegerDenganLong(koneksi,
                         "SELECT COUNT(*) FROM penugasan_mengajar WHERE aktif = TRUE AND id_guru = ?",
-                        teacherIdScope);
-                assessmentsCount = querySingleIntWithLong(conn, """
+                        idCakupanGuru);
+                jumlahPenilaian = kueriSatuIntegerDenganLong(koneksi, """
                         SELECT COUNT(*)
                         FROM penilaian p
                         JOIN penugasan_mengajar pm ON pm.id = p.id_penugasan_mengajar
                         WHERE pm.id_guru = ?
-                        """, teacherIdScope);
+                        """, idCakupanGuru);
             }
 
-            int totalAttendanceRecords = 0;
-            BigDecimal overallAttPct = null;
-            String attSql = teacherIdScope == null
-                    ? """
+            int totalCatatanAbsensi = 0;
+            BigDecimal persentaseAbsensi = null;
+            String sqlAbsensi;
+            if (idCakupanGuru == null) {
+                sqlAbsensi = """
                       SELECT COUNT(*) AS total_cnt,
                              CASE WHEN COUNT(*) > 0
                                   THEN ROUND(COUNT(*) FILTER (WHERE status = 'HADIR') * 100.0 / COUNT(*), 2)
                                   ELSE NULL
                              END AS pct
                       FROM absensi
-                      """
-                    : """
+                      """;
+            } else {
+                sqlAbsensi = """
                       SELECT COUNT(*) AS total_cnt,
                              CASE WHEN COUNT(*) > 0
                                   THEN ROUND(COUNT(*) FILTER (WHERE status = 'HADIR') * 100.0 / COUNT(*), 2)
                                   ELSE NULL
                              END AS pct
                       FROM absensi
-                      WHERE id_kelas IN (""" + TEACHER_CLASS_IDS_SQL + ")";
+                      WHERE id_kelas IN (""" + SQL_ID_KELAS_GURU + ")";
+            }
 
-            try (PreparedStatement ps = conn.prepareStatement(attSql)) {
-                if (teacherIdScope != null) {
-                    ps.setLong(1, teacherIdScope);
-                    ps.setLong(2, teacherIdScope);
+            try (PreparedStatement pernyataan = koneksi.prepareStatement(sqlAbsensi)) {
+                if (idCakupanGuru != null) {
+                    pernyataan.setLong(1, idCakupanGuru);
+                    pernyataan.setLong(2, idCakupanGuru);
                 }
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        totalAttendanceRecords = rs.getInt("total_cnt");
-                        overallAttPct = rs.getBigDecimal("pct");
+                try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                    if (hasilQuery.next()) {
+                        totalCatatanAbsensi = hasilQuery.getInt("total_cnt");
+                        persentaseAbsensi = hasilQuery.getBigDecimal("pct");
                     }
                 }
             }
 
-            String scopeLabel = teacherIdScope == null ? "Sekolah (Admin)" : "Guru (Kelas Diampu)";
+            String labelCakupan = idCakupanGuru == null ? "Sekolah (Admin)" : "Guru (Kelas Diampu)";
             return new DashboardSummary(
-                    scopeLabel,
-                    activeStudents,
-                    inactiveStudents,
-                    activeTeachers,
-                    inactiveTeachers,
-                    activeClasses,
-                    activeSubjects,
-                    activeYearName,
-                    activeSemesters,
-                    homeroomCount,
-                    teachingCount,
-                    assessmentsCount,
-                    totalAttendanceRecords,
-                    overallAttPct);
+                    labelCakupan,
+                    siswaAktif,
+                    siswaTidakAktif,
+                    guruAktif,
+                    guruTidakAktif,
+                    kelasAktif,
+                    mapelAktif,
+                    namaTahunAktif,
+                    jumlahSemesterAktif,
+                    jumlahWaliKelas,
+                    jumlahPenugasanMengajar,
+                    jumlahPenilaian,
+                    totalCatatanAbsensi,
+                    persentaseAbsensi);
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil ringkasan dashboard dari database.", e);
         }
     }
 
     @Override
-    public List<ClassStudentCountReport> findActiveStudentCountsByClass(Long teacherIdScope) {
-        String sql = teacherIdScope == null
-                ? SQL_CLASS_STUDENT_COUNTS_ADMIN
-                : SQL_CLASS_STUDENT_COUNTS_TEACHER;
+    public List<ClassStudentCountReport> findActiveStudentCountsByClass(Long idCakupanGuru) {
+        String sql = idCakupanGuru == null
+                ? SQL_JUMLAH_SISWA_KELAS_ADMIN
+                : SQL_JUMLAH_SISWA_KELAS_GURU;
 
-        List<ClassStudentCountReport> list = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        List<ClassStudentCountReport> daftarLaporan = new ArrayList<>();
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(sql)) {
 
-            if (teacherIdScope != null) {
-                ps.setLong(1, teacherIdScope);
-                ps.setLong(2, teacherIdScope);
+            if (idCakupanGuru != null) {
+                pernyataan.setLong(1, idCakupanGuru);
+                pernyataan.setLong(2, idCakupanGuru);
             }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(new ClassStudentCountReport(
-                            rs.getLong("id"),
-                            rs.getString("nama"),
-                            rs.getInt("tingkat_kelas"),
-                            rs.getString("tahun_ajaran_nama"),
-                            rs.getInt("kapasitas"),
-                            rs.getInt("active_student_count")));
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                while (hasilQuery.next()) {
+                    daftarLaporan.add(new ClassStudentCountReport(
+                            hasilQuery.getLong("id"),
+                            hasilQuery.getString("nama"),
+                            hasilQuery.getInt("tingkat_kelas"),
+                            hasilQuery.getString("tahun_ajaran_nama"),
+                            hasilQuery.getInt("kapasitas"),
+                            hasilQuery.getInt("active_student_count")));
                 }
             }
-            return list;
+            return daftarLaporan;
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil laporan jumlah siswa per kelas.", e);
         }
     }
 
     @Override
-    public List<GenderStudentCountReport> findActiveStudentCountsByGender(Long teacherIdScope) {
-        String sql = teacherIdScope == null
-                ? SQL_GENDER_COUNTS_ADMIN
-                : SQL_GENDER_COUNTS_TEACHER;
+    public List<GenderStudentCountReport> findActiveStudentCountsByGender(Long idCakupanGuru) {
+        String sql = idCakupanGuru == null
+                ? SQL_JUMLAH_GENDER_ADMIN
+                : SQL_JUMLAH_GENDER_GURU;
 
-        List<GenderStudentCountReport> list = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        List<GenderStudentCountReport> daftarLaporan = new ArrayList<>();
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(sql)) {
 
-            if (teacherIdScope != null) {
-                ps.setLong(1, teacherIdScope);
-                ps.setLong(2, teacherIdScope);
+            if (idCakupanGuru != null) {
+                pernyataan.setLong(1, idCakupanGuru);
+                pernyataan.setLong(2, idCakupanGuru);
             }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(new GenderStudentCountReport(
-                            rs.getString("code"),
-                            rs.getString("label"),
-                            rs.getInt("active_student_count")));
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                while (hasilQuery.next()) {
+                    daftarLaporan.add(new GenderStudentCountReport(
+                            hasilQuery.getString("code"),
+                            hasilQuery.getString("label"),
+                            hasilQuery.getInt("active_student_count")));
                 }
             }
-            return list;
+            return daftarLaporan;
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil laporan jumlah siswa per jenis kelamin.", e);
         }
@@ -519,37 +524,37 @@ public class PostgresReportDAO implements ReportDAO {
 
     @Override
     public AttendanceRangeReport findAttendanceSummaryByDateRange(
-            LocalDate startDate,
-            LocalDate endDate,
-            Long teacherIdScope) {
+            LocalDate tanggalMulai,
+            LocalDate tanggalSelesai,
+            Long idCakupanGuru) {
 
-        String sql = teacherIdScope == null
-                ? SQL_ATTENDANCE_RANGE_ADMIN
-                : SQL_ATTENDANCE_RANGE_TEACHER;
+        String sql = idCakupanGuru == null
+                ? SQL_ABSENSI_RENTANG_ADMIN
+                : SQL_ABSENSI_RENTANG_GURU;
 
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(sql)) {
 
-            ps.setDate(1, Date.valueOf(startDate));
-            ps.setDate(2, Date.valueOf(endDate));
-            if (teacherIdScope != null) {
-                ps.setLong(3, teacherIdScope);
-                ps.setLong(4, teacherIdScope);
+            pernyataan.setDate(1, Date.valueOf(tanggalMulai));
+            pernyataan.setDate(2, Date.valueOf(tanggalSelesai));
+            if (idCakupanGuru != null) {
+                pernyataan.setLong(3, idCakupanGuru);
+                pernyataan.setLong(4, idCakupanGuru);
             }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                if (hasilQuery.next()) {
                     return new AttendanceRangeReport(
-                            startDate,
-                            endDate,
-                            rs.getInt("total_records"),
-                            rs.getInt("hadir_count"),
-                            rs.getInt("sakit_count"),
-                            rs.getInt("izin_count"),
-                            rs.getInt("alpa_count"),
-                            rs.getBigDecimal("attendance_pct"));
+                            tanggalMulai,
+                            tanggalSelesai,
+                            hasilQuery.getInt("total_records"),
+                            hasilQuery.getInt("hadir_count"),
+                            hasilQuery.getInt("sakit_count"),
+                            hasilQuery.getInt("izin_count"),
+                            hasilQuery.getInt("alpa_count"),
+                            hasilQuery.getBigDecimal("attendance_pct"));
                 }
-                return new AttendanceRangeReport(startDate, endDate, 0, 0, 0, 0, 0, null);
+                return new AttendanceRangeReport(tanggalMulai, tanggalSelesai, 0, 0, 0, 0, 0, null);
             }
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil rekapitulasi absensi berdasarkan rentang tanggal.", e);
@@ -558,12 +563,12 @@ public class PostgresReportDAO implements ReportDAO {
 
     @Override
     public List<ClassAttendanceReport> findAttendanceSummariesByClass(
-            LocalDate startDate,
-            LocalDate endDate,
-            Long teacherIdScope) {
+            LocalDate tanggalMulai,
+            LocalDate tanggalSelesai,
+            Long idCakupanGuru) {
 
-        boolean hasDateRange = startDate != null && endDate != null;
-        StringBuilder sql = new StringBuilder("""
+        boolean punyaRentangTanggal = tanggalMulai != null && tanggalSelesai != null;
+        StringBuilder sqlBuilder = new StringBuilder("""
                 SELECT k.id,
                        k.nama,
                        k.tingkat_kelas,
@@ -580,140 +585,143 @@ public class PostgresReportDAO implements ReportDAO {
                 FROM kelas k
                 LEFT JOIN absensi a ON a.id_kelas = k.id
                 """);
-        if (hasDateRange) {
-            sql.append(" AND a.tanggal_absensi BETWEEN ? AND ?\n");
+        if (punyaRentangTanggal) {
+            sqlBuilder.append(" AND a.tanggal_absensi BETWEEN ? AND ?\n");
         }
-        sql.append(" WHERE k.aktif = TRUE\n");
-        if (teacherIdScope != null) {
-            sql.append(" AND k.id IN (").append(TEACHER_CLASS_IDS_SQL).append(")\n");
+        sqlBuilder.append(" WHERE k.aktif = TRUE\n");
+        if (idCakupanGuru != null) {
+            sqlBuilder.append(" AND k.id IN (").append(SQL_ID_KELAS_GURU).append(")\n");
         }
-        sql.append("""
+        sqlBuilder.append("""
                 GROUP BY k.id, k.nama, k.tingkat_kelas
                 ORDER BY k.tingkat_kelas ASC, k.nama ASC, k.id ASC
                 """);
 
-        List<ClassAttendanceReport> list = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+        List<ClassAttendanceReport> daftarLaporan = new ArrayList<>();
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(sqlBuilder.toString())) {
 
-            int paramIdx = 1;
-            if (hasDateRange) {
-                ps.setDate(paramIdx++, Date.valueOf(startDate));
-                ps.setDate(paramIdx++, Date.valueOf(endDate));
+            int indeksParameter = 1;
+            if (punyaRentangTanggal) {
+                pernyataan.setDate(indeksParameter++, Date.valueOf(tanggalMulai));
+                pernyataan.setDate(indeksParameter++, Date.valueOf(tanggalSelesai));
             }
-            if (teacherIdScope != null) {
-                ps.setLong(paramIdx++, teacherIdScope);
-                ps.setLong(paramIdx, teacherIdScope);
+            if (idCakupanGuru != null) {
+                pernyataan.setLong(indeksParameter++, idCakupanGuru);
+                pernyataan.setLong(indeksParameter, idCakupanGuru);
             }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(new ClassAttendanceReport(
-                            rs.getLong("id"),
-                            rs.getString("nama"),
-                            rs.getInt("tingkat_kelas"),
-                            rs.getInt("total_records"),
-                            rs.getInt("hadir_count"),
-                            rs.getInt("sakit_count"),
-                            rs.getInt("izin_count"),
-                            rs.getInt("alpa_count"),
-                            rs.getBigDecimal("attendance_pct")));
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                while (hasilQuery.next()) {
+                    daftarLaporan.add(new ClassAttendanceReport(
+                            hasilQuery.getLong("id"),
+                            hasilQuery.getString("nama"),
+                            hasilQuery.getInt("tingkat_kelas"),
+                            hasilQuery.getInt("total_records"),
+                            hasilQuery.getInt("hadir_count"),
+                            hasilQuery.getInt("sakit_count"),
+                            hasilQuery.getInt("izin_count"),
+                            hasilQuery.getInt("alpa_count"),
+                            hasilQuery.getBigDecimal("attendance_pct")));
                 }
             }
-            return list;
+            return daftarLaporan;
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil rekapitulasi absensi per kelas.", e);
         }
     }
 
     @Override
-    public List<AssessmentReport> findAssessmentSummaries(Long teacherIdScope) {
-        String sql = teacherIdScope == null
-                ? SQL_ASSESSMENT_SUMMARIES_ADMIN
-                : SQL_ASSESSMENT_SUMMARIES_TEACHER;
+    public List<AssessmentReport> findAssessmentSummaries(Long idCakupanGuru) {
+        String sql = idCakupanGuru == null
+                ? SQL_RINGKASAN_PENILAIAN_ADMIN
+                : SQL_RINGKASAN_PENILAIAN_GURU;
 
-        List<AssessmentReport> list = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        List<AssessmentReport> daftarLaporan = new ArrayList<>();
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(sql)) {
 
-            if (teacherIdScope != null) {
-                ps.setLong(1, teacherIdScope);
+            if (idCakupanGuru != null) {
+                pernyataan.setLong(1, idCakupanGuru);
             }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    Date date = rs.getDate("tanggal_penilaian");
-                    list.add(new AssessmentReport(
-                            rs.getLong("id"),
-                            rs.getLong("id_penugasan_mengajar"),
-                            rs.getString("class_name"),
-                            rs.getString("subject_name"),
-                            rs.getString("judul"),
-                            rs.getString("jenis_penilaian"),
-                            date != null ? date.toLocalDate() : null,
-                            rs.getBigDecimal("nilai_maksimal"),
-                            rs.getInt("scored_cnt"),
-                            rs.getBigDecimal("avg_score"),
-                            rs.getBigDecimal("highest_score"),
-                            rs.getBigDecimal("lowest_score"),
-                            rs.getBigDecimal("avg_pct")));
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                while (hasilQuery.next()) {
+                    Date tanggalSql = hasilQuery.getDate("tanggal_penilaian");
+                    daftarLaporan.add(new AssessmentReport(
+                            hasilQuery.getLong("id"),
+                            hasilQuery.getLong("id_penugasan_mengajar"),
+                            hasilQuery.getString("class_name"),
+                            hasilQuery.getString("subject_name"),
+                            hasilQuery.getString("judul"),
+                            hasilQuery.getString("jenis_penilaian"),
+                            tanggalSql != null ? tanggalSql.toLocalDate() : null,
+                            hasilQuery.getBigDecimal("nilai_maksimal"),
+                            hasilQuery.getInt("scored_cnt"),
+                            hasilQuery.getBigDecimal("avg_score"),
+                            hasilQuery.getBigDecimal("highest_score"),
+                            hasilQuery.getBigDecimal("lowest_score"),
+                            hasilQuery.getBigDecimal("avg_pct")));
                 }
             }
-            return list;
+            return daftarLaporan;
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil ringkasan penilaian.", e);
         }
     }
 
     @Override
-    public List<StudentScoreReport> findStudentScoreSummaries(Long teacherIdScope) {
-        return queryStudentScoreSummaries(null, teacherIdScope);
+    public List<StudentScoreReport> findStudentScoreSummaries(Long idCakupanGuru) {
+        return kueriRingkasanNilaiSiswa(null, idCakupanGuru);
     }
 
     @Override
-    public Optional<StudentScoreReport> findStudentScoreSummaryByStudentId(Long studentId, Long teacherIdScope) {
-        if (studentId == null) {
+    public Optional<StudentScoreReport> findStudentScoreSummaryByStudentId(Long idSiswa, Long idCakupanGuru) {
+        if (idSiswa == null) {
             return Optional.empty();
         }
-        List<StudentScoreReport> rows = queryStudentScoreSummaries(studentId, teacherIdScope);
-        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+        List<StudentScoreReport> baris = kueriRingkasanNilaiSiswa(idSiswa, idCakupanGuru);
+        if (baris.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(baris.get(0));
     }
 
     @Override
-    public List<SubjectScoreReport> findAverageScoresBySubject(Long teacherIdScope) {
-        String sql = teacherIdScope == null
-                ? SQL_SUBJECT_AVERAGE_ADMIN
-                : SQL_SUBJECT_AVERAGE_TEACHER;
+    public List<SubjectScoreReport> findAverageScoresBySubject(Long idCakupanGuru) {
+        String sql = idCakupanGuru == null
+                ? SQL_RATA_RATA_MAPEL_ADMIN
+                : SQL_RATA_RATA_MAPEL_GURU;
 
-        List<SubjectScoreReport> list = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        List<SubjectScoreReport> daftarLaporan = new ArrayList<>();
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(sql)) {
 
-            if (teacherIdScope != null) {
-                ps.setLong(1, teacherIdScope);
-                ps.setLong(2, teacherIdScope);
+            if (idCakupanGuru != null) {
+                pernyataan.setLong(1, idCakupanGuru);
+                pernyataan.setLong(2, idCakupanGuru);
             }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(new SubjectScoreReport(
-                            rs.getLong("id"),
-                            rs.getString("kode"),
-                            rs.getString("nama"),
-                            rs.getInt("assessment_cnt"),
-                            rs.getInt("scored_cnt"),
-                            rs.getBigDecimal("avg_score"),
-                            rs.getBigDecimal("avg_pct")));
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                while (hasilQuery.next()) {
+                    daftarLaporan.add(new SubjectScoreReport(
+                            hasilQuery.getLong("id"),
+                            hasilQuery.getString("kode"),
+                            hasilQuery.getString("nama"),
+                            hasilQuery.getInt("assessment_cnt"),
+                            hasilQuery.getInt("scored_cnt"),
+                            hasilQuery.getBigDecimal("avg_score"),
+                            hasilQuery.getBigDecimal("avg_pct")));
                 }
             }
-            return list;
+            return daftarLaporan;
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil rata-rata nilai per mata pelajaran.", e);
         }
     }
 
-    private List<StudentScoreReport> queryStudentScoreSummaries(Long studentIdFilter, Long teacherIdScope) {
-        StringBuilder sql = new StringBuilder("""
+    private List<StudentScoreReport> kueriRingkasanNilaiSiswa(Long filterIdSiswa, Long idCakupanGuru) {
+        StringBuilder sqlBuilder = new StringBuilder("""
                 SELECT s.id,
                        s.nis,
                        s.nama_lengkap,
@@ -735,8 +743,8 @@ public class PostgresReportDAO implements ReportDAO {
                 LEFT JOIN kelas k ON k.id = rks.id_kelas
                 """);
 
-        if (teacherIdScope == null) {
-            sql.append("""
+        if (idCakupanGuru == null) {
+            sqlBuilder.append("""
                     LEFT JOIN (
                         SELECT ns.id AS score_id, ns.id_siswa, ns.nilai, p.nilai_maksimal
                         FROM nilai_siswa ns
@@ -745,7 +753,7 @@ public class PostgresReportDAO implements ReportDAO {
                     WHERE s.aktif = TRUE
                     """);
         } else {
-            sql.append("""
+            sqlBuilder.append("""
                     LEFT JOIN (
                         SELECT ns.id AS score_id, ns.id_siswa, ns.nilai, p.nilai_maksimal
                         FROM nilai_siswa ns
@@ -765,63 +773,68 @@ public class PostgresReportDAO implements ReportDAO {
                     """);
         }
 
-        if (studentIdFilter != null) {
-            sql.append(" AND s.id = ?\n");
+        if (filterIdSiswa != null) {
+            sqlBuilder.append(" AND s.id = ?\n");
         }
 
-        sql.append("""
+        sqlBuilder.append("""
                 GROUP BY s.id, s.nis, s.nama_lengkap
                 ORDER BY s.nama_lengkap ASC, s.id ASC
                 """);
 
-        List<StudentScoreReport> list = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+        List<StudentScoreReport> daftarLaporan = new ArrayList<>();
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(sqlBuilder.toString())) {
 
-            int paramIdx = 1;
-            if (teacherIdScope != null) {
-                ps.setLong(paramIdx++, teacherIdScope);
-                ps.setLong(paramIdx++, teacherIdScope);
-                ps.setLong(paramIdx++, teacherIdScope);
+            int indeksParameter = 1;
+            if (idCakupanGuru != null) {
+                pernyataan.setLong(indeksParameter++, idCakupanGuru);
+                pernyataan.setLong(indeksParameter++, idCakupanGuru);
+                pernyataan.setLong(indeksParameter++, idCakupanGuru);
             }
-            if (studentIdFilter != null) {
-                ps.setLong(paramIdx, studentIdFilter);
+            if (filterIdSiswa != null) {
+                pernyataan.setLong(indeksParameter, filterIdSiswa);
             }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(new StudentScoreReport(
-                            rs.getLong("id"),
-                            rs.getString("nis"),
-                            rs.getString("nama_lengkap"),
-                            JdbcUtils.emptyIfNull(rs.getString("current_class_name")),
-                            rs.getInt("assessment_cnt"),
-                            rs.getBigDecimal("total_earned"),
-                            rs.getBigDecimal("total_max"),
-                            rs.getBigDecimal("avg_score"),
-                            rs.getBigDecimal("overall_pct")));
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                while (hasilQuery.next()) {
+                    daftarLaporan.add(new StudentScoreReport(
+                            hasilQuery.getLong("id"),
+                            hasilQuery.getString("nis"),
+                            hasilQuery.getString("nama_lengkap"),
+                            JdbcUtils.emptyIfNull(hasilQuery.getString("current_class_name")),
+                            hasilQuery.getInt("assessment_cnt"),
+                            hasilQuery.getBigDecimal("total_earned"),
+                            hasilQuery.getBigDecimal("total_max"),
+                            hasilQuery.getBigDecimal("avg_score"),
+                            hasilQuery.getBigDecimal("overall_pct")));
                 }
             }
-            return list;
+            return daftarLaporan;
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil ringkasan nilai siswa.", e);
         }
     }
 
-    private int querySingleInt(Connection conn, String sql) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            return rs.next() ? rs.getInt(1) : 0;
+    private int kueriSatuInteger(Connection koneksi, String sql) throws SQLException {
+        try (PreparedStatement pernyataan = koneksi.prepareStatement(sql);
+             ResultSet hasilQuery = pernyataan.executeQuery()) {
+            if (hasilQuery.next()) {
+                return hasilQuery.getInt(1);
+            }
+            return 0;
         }
     }
 
-    private int querySingleIntWithLong(Connection conn, String sql, Long param) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, param);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt(1) : 0;
+    private int kueriSatuIntegerDenganLong(Connection koneksi, String sql, Long parameter) throws SQLException {
+        try (PreparedStatement pernyataan = koneksi.prepareStatement(sql)) {
+            pernyataan.setLong(1, parameter);
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                if (hasilQuery.next()) {
+                    return hasilQuery.getInt(1);
+                }
+                return 0;
             }
         }
     }
 }
-

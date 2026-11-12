@@ -9,12 +9,15 @@ import java.awt.event.MouseEvent;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
+import javax.swing.JPasswordField;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
+import id.ac.sekolah.manajemenkelas.auth.model.User;
 import id.ac.sekolah.manajemenkelas.presentation.swing.app.ApplicationContainer;
 import id.ac.sekolah.manajemenkelas.presentation.swing.component.AsyncTaskRunner;
 import id.ac.sekolah.manajemenkelas.presentation.swing.component.ClayCard;
@@ -45,11 +48,12 @@ public class TeacherPanel extends JPanel implements ScreenPage {
     private final SearchField searchField = new SearchField("Cari nama, NIP, atau email...");
     private final JComboBox<String> statusFilter = new JComboBox<>(new String[]{"Semua Status", "Aktif", "Nonaktif"});
     private final PrimaryButton addButton = new PrimaryButton("Tambah Guru", BotanicalIcons.get(BotanicalIcons.Type.PLUS, 16, BotanicalTheme.WHITE));
+    private final IconButton accountButton = new IconButton("Akun Login", BotanicalIcons.get(BotanicalIcons.Type.TEACHERS, 15, BotanicalTheme.SUCCESS), "Atur akun login & tautan profil guru", IconButton.Tone.SUCCESS);
     private final IconButton editButton = new IconButton("Edit", BotanicalIcons.get(BotanicalIcons.Type.EDIT, 15, BotanicalTheme.EVERGREEN), "Ubah data guru terpilih", IconButton.Tone.NEUTRAL);
     private final IconButton deactivateButton = new IconButton("Nonaktifkan", BotanicalIcons.get(BotanicalIcons.Type.DEACTIVATE, 15, BotanicalTheme.DANGER), "Nonaktifkan guru terpilih", IconButton.Tone.DANGER);
 
     private final DefaultTableModel tableModel = new DefaultTableModel(
-            new String[]{"ID", "NIP", "Nama Lengkap", "L/P", "Email", "No. Telepon", "Pendidikan", "Tgl Bergabung", "Status"}, 0) {
+            new String[]{"ID", "NIP", "Nama Lengkap", "L/P", "Email", "No. Telepon", "Pendidikan", "Tgl Bergabung", "Akun Login", "Status"}, 0) {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -61,6 +65,7 @@ public class TeacherPanel extends JPanel implements ScreenPage {
 
     private List<Teacher> allTeachers = List.of();
     private List<Teacher> filteredTeachers = List.of();
+    private Map<Long, User> teacherAccounts = Map.of();
 
     public TeacherPanel(ApplicationContainer container) {
         this.container = container;
@@ -74,9 +79,9 @@ public class TeacherPanel extends JPanel implements ScreenPage {
         add(topArea, BorderLayout.NORTH);
 
         JPanel tableCard = new ClayCard(new BorderLayout(0, 10));
-        table.setStatusColumns(8);
-        table.setCenterAlignedColumns(0, 3, 7);
-        table.setColumnWidths(52, 130, 185, 50, 175, 110, 115, 102, 92);
+        table.setStatusColumns(9);
+        table.setCenterAlignedColumns(0, 3, 7, 8);
+        table.setColumnWidths(48, 120, 175, 48, 165, 105, 105, 98, 115, 88);
         table.getSelectionModel().addListSelectionListener(e -> updateSelectionButtons());
         table.addMouseListener(new MouseAdapter() {
             @Override
@@ -106,6 +111,7 @@ public class TeacherPanel extends JPanel implements ScreenPage {
         });
         paginationBar.setOnPageChange(this::renderCurrentPage);
         addButton.addActionListener(e -> onAddTeacher());
+        accountButton.addActionListener(e -> onManageAccountSelected());
         editButton.addActionListener(e -> onEditSelected());
         deactivateButton.addActionListener(e -> onDeactivateSelected());
         updateSelectionButtons();
@@ -124,6 +130,7 @@ public class TeacherPanel extends JPanel implements ScreenPage {
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
+        right.add(accountButton);
         right.add(editButton);
         right.add(deactivateButton);
         right.add(addButton);
@@ -135,10 +142,20 @@ public class TeacherPanel extends JPanel implements ScreenPage {
     public void refreshData() {
         feedbackBanner.clear();
         AsyncTaskRunner.run(
-                () -> container.getTeacherService().getAllTeachers(),
+                () -> {
+                    List<Teacher> daftarGuru = container.getTeacherService().getAllTeachers();
+                    Map<Long, User> daftarAkun = container.getAuthService().getTeacherAccountsMap();
+                    return new Object[]{daftarGuru, daftarAkun};
+                },
                 () -> stateDeck.showLoading("Memuat data guru..."),
-                teachers -> {
-                    this.allTeachers = teachers;
+                hasil -> {
+                    Object[] arr = (Object[]) hasil;
+                    @SuppressWarnings("unchecked")
+                    List<Teacher> daftarGuru = (List<Teacher>) arr[0];
+                    @SuppressWarnings("unchecked")
+                    Map<Long, User> daftarAkun = (Map<Long, User>) arr[1];
+                    this.allTeachers = daftarGuru;
+                    this.teacherAccounts = daftarAkun;
                     applyFilterAndRender();
                 },
                 error -> stateDeck.showError(FeedbackBanner.extractMessage(error)));
@@ -185,6 +202,11 @@ public class TeacherPanel extends JPanel implements ScreenPage {
         tableModel.setRowCount(0);
         for (int i = from; i < to; i++) {
             Teacher t = filteredTeachers.get(i);
+            User akun = teacherAccounts.get(t.getId());
+            String labelAkun = "Belum ada";
+            if (akun != null) {
+                labelAkun = "@" + akun.getUsername() + (akun.isActive() ? "" : " (Nonaktif)");
+            }
             tableModel.addRow(new Object[]{
                     t.getId(),
                     t.getNip(),
@@ -194,6 +216,7 @@ public class TeacherPanel extends JPanel implements ScreenPage {
                     t.getPhone() == null || t.getPhone().isBlank() ? "-" : t.getPhone(),
                     t.getEducation(),
                     String.valueOf(t.getJoinDate()),
+                    labelAkun,
                     t.isActive() ? "AKTIF" : "NONAKTIF"
             });
         }
@@ -211,8 +234,23 @@ public class TeacherPanel extends JPanel implements ScreenPage {
 
     private void updateSelectionButtons() {
         Teacher selected = getSelectedTeacher();
+        accountButton.setEnabled(selected != null);
         editButton.setEnabled(selected != null);
         deactivateButton.setEnabled(selected != null && selected.isActive());
+    }
+
+    private void onManageAccountSelected() {
+        Teacher selected = getSelectedTeacher();
+        if (selected == null) {
+            return;
+        }
+        User akunTerhubung = teacherAccounts.get(selected.getId());
+        TeacherAccountDialog dialog = new TeacherAccountDialog(this, container, selected, akunTerhubung);
+        dialog.setVisible(true);
+        if (dialog.isSaved()) {
+            feedbackBanner.showSuccess("Akun login untuk guru \"" + selected.getFullName() + "\" berhasil disimpan.");
+            refreshData();
+        }
     }
 
     private void onAddTeacher() {
@@ -371,6 +409,101 @@ public class TeacherPanel extends JPanel implements ScreenPage {
                 return container.getTeacherService().updateTeacher(
                         editing.getId(), nip, fullName, gender, email, phone, address, education, joinDate);
             }, null);
+        }
+    }
+
+    private static final class TeacherAccountDialog extends ModalFormDialog {
+
+        private final ApplicationContainer container;
+        private final Teacher guru;
+        private final User akunAda;
+
+        private final JTextField namaGuruDisplay = new JTextField();
+        private final JTextField usernameInput = new JTextField();
+        private final JPasswordField passwordInput = new JPasswordField();
+        private final JComboBox<String> statusInput = new JComboBox<>(new String[]{"Aktif", "Nonaktif"});
+
+        private final FormField usernameField = new FormField(
+                "Username Login",
+                usernameInput,
+                true,
+                "Tanpa spasi. Contoh: jasmine atau guru");
+        private final FormField passwordField;
+
+        private TeacherAccountDialog(
+                Component owner,
+                ApplicationContainer container,
+                Teacher guru,
+                User akunAda) {
+            super(
+                    owner,
+                    akunAda == null ? "Buat / Tautkan Akun Login Guru" : "Kelola Akun Login Guru",
+                    "Simpan Akun",
+                    520,
+                    430);
+            this.container = container;
+            this.guru = guru;
+            this.akunAda = akunAda;
+
+            namaGuruDisplay.setText(guru.getFullName() + " (NIP: " + guru.getNip() + ")");
+            namaGuruDisplay.setEditable(false);
+
+            String petunjukSandi = akunAda == null
+                    ? "Wajib diisi untuk akun baru (atau kosongkan jika menautkan akun @guru yang sudah ada)."
+                    : "Kosongkan jika tidak ingin mengubah kata sandi saat ini.";
+            this.passwordField = fullWidth(new FormField("Kata Sandi", passwordInput, false, petunjukSandi));
+
+            if (akunAda != null) {
+                usernameInput.setText(akunAda.getUsername());
+                statusInput.setSelectedItem(akunAda.isActive() ? "Aktif" : "Nonaktif");
+            } else {
+                String saran = buatSaranUsername(guru.getFullName());
+                usernameInput.setText(saran);
+                statusInput.setSelectedItem("Aktif");
+            }
+
+            addSectionCard(
+                    "Profil & Kredensial Guru",
+                    fullWidth(new FormField("Profil Guru Tertaut", namaGuruDisplay, false)),
+                    usernameField,
+                    new FormField("Status Akun", statusInput, true),
+                    passwordField);
+        }
+
+        private static String buatSaranUsername(String namaLengkap) {
+            if (namaLengkap == null || namaLengkap.isBlank()) {
+                return "";
+            }
+            String bersih = namaLengkap.trim().toLowerCase().replaceAll("[^a-z0-9]+", ".");
+            bersih = bersih.replaceAll("^\\.+|\\.+$", "");
+            int titik = bersih.indexOf('.');
+            return titik > 0 ? bersih.substring(0, titik) : bersih;
+        }
+
+        @Override
+        protected void onSubmit() {
+            usernameField.clearError();
+            passwordField.clearError();
+
+            String username = usernameInput.getText().trim();
+            String password = new String(passwordInput.getPassword());
+            boolean aktif = "Aktif".equals(statusInput.getSelectedItem());
+
+            if (username.isEmpty()) {
+                usernameField.setError("Username wajib diisi.");
+                return;
+            }
+            if (username.contains(" ")) {
+                usernameField.setError("Username tidak boleh mengandung spasi.");
+                return;
+            }
+
+            executeSave(() -> container.getAuthService().saveOrUpdateTeacherAccount(
+                    guru.getId(),
+                    username,
+                    password,
+                    guru.getFullName(),
+                    aktif), null);
         }
     }
 }

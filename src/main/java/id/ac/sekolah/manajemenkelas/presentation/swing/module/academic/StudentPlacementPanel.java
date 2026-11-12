@@ -146,19 +146,32 @@ public class StudentPlacementPanel extends JPanel implements ScreenPage {
                     @SuppressWarnings("unchecked")
                     List<StudentPlacement> placements = (List<StudentPlacement>) arr[3];
 
-                    this.activeStudents = students.stream().filter(Student::isActive).toList();
-                    this.activeClasses = classes.stream().filter(SchoolClass::isActive).toList();
-
+                    List<Student> daftarSiswaAktif = new ArrayList<>();
                     Map<Long, Student> sMap = new HashMap<>();
-                    students.forEach(s -> sMap.put(s.getId(), s));
+                    for (Student s : students) {
+                        if (s.isActive()) {
+                            daftarSiswaAktif.add(s);
+                        }
+                        sMap.put(s.getId(), s);
+                    }
+                    this.activeStudents = daftarSiswaAktif;
                     this.studentMap = sMap;
 
+                    List<SchoolClass> daftarKelasAktif = new ArrayList<>();
                     Map<Long, String> cMap = new HashMap<>();
-                    classes.forEach(c -> cMap.put(c.getId(), c.getName()));
+                    for (SchoolClass c : classes) {
+                        if (c.isActive()) {
+                            daftarKelasAktif.add(c);
+                        }
+                        cMap.put(c.getId(), c.getName());
+                    }
+                    this.activeClasses = daftarKelasAktif;
                     this.classNames = cMap;
 
                     Map<Long, String> yMap = new HashMap<>();
-                    years.forEach(y -> yMap.put(y.getId(), y.getName()));
+                    for (AcademicYear y : years) {
+                        yMap.put(y.getId(), y.getName());
+                    }
                     this.yearNames = yMap;
 
                     this.allPlacements = placements;
@@ -236,9 +249,12 @@ public class StudentPlacementPanel extends JPanel implements ScreenPage {
         }
         Student student = studentMap.get(sel.getStudentId());
         String studentName = student != null ? student.getFullName() : "Siswa #" + sel.getStudentId();
-        List<SchoolClass> targetClasses = activeClasses.stream()
-                .filter(c -> !c.getId().equals(sel.getClassId()))
-                .toList();
+        List<SchoolClass> targetClasses = new ArrayList<>();
+        for (SchoolClass c : activeClasses) {
+            if (!c.getId().equals(sel.getClassId())) {
+                targetClasses.add(c);
+            }
+        }
         if (targetClasses.isEmpty()) {
             feedbackBanner.showWarning("Tidak ada kelas tujuan lain yang aktif.");
             return;
@@ -273,9 +289,12 @@ public class StudentPlacementPanel extends JPanel implements ScreenPage {
         }
         Student student = studentMap.get(sel.getStudentId());
         String title = student != null ? student.getNis() + " - " + student.getFullName() : "Siswa #" + sel.getStudentId();
-        List<StudentPlacement> history = allPlacements.stream()
-                .filter(p -> p.getStudentId().equals(sel.getStudentId()))
-                .toList();
+        List<StudentPlacement> history = new ArrayList<>();
+        for (StudentPlacement p : allPlacements) {
+            if (p.getStudentId().equals(sel.getStudentId())) {
+                history.add(p);
+            }
+        }
 
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Riwayat Penempatan: " + title, JDialog.ModalityType.APPLICATION_MODAL);
         dialog.setSize(640, 360);
@@ -324,8 +343,12 @@ public class StudentPlacementPanel extends JPanel implements ScreenPage {
         private PlaceStudentDialog(Component owner, ApplicationContainer container, List<Student> students, List<SchoolClass> classes) {
             super(owner, "Tempatkan Siswa ke Kelas", "Tempatkan Siswa", 540, 380);
             this.container = container;
-            students.forEach(s -> studentCombo.addItem(new SelectItem<>(s, s.getNis() + " - " + s.getFullName())));
-            classes.forEach(c -> classCombo.addItem(new SelectItem<>(c, c.getName() + " (Kap: " + c.getCapacity() + ")")));
+            for (Student s : students) {
+                studentCombo.addItem(new SelectItem<>(s, s.getNis() + " - " + s.getFullName()));
+            }
+            for (SchoolClass c : classes) {
+                classCombo.addItem(new SelectItem<>(c, c.getName() + " (Kap: " + c.getCapacity() + ")"));
+            }
             addSectionCard(
                     "Penempatan Awal",
                     fullWidth(new FormField("Siswa Aktif", studentCombo, true)),
@@ -365,7 +388,9 @@ public class StudentPlacementPanel extends JPanel implements ScreenPage {
             super(owner, "Naik Kelas / Pindah Kelas", "Proses Perpindahan", 540, 390);
             this.container = container;
             this.current = current;
-            targets.forEach(c -> targetCombo.addItem(new SelectItem<>(c, c.getName() + " (Tingkat " + c.getGradeLevel() + ")")));
+            for (SchoolClass c : targets) {
+                targetCombo.addItem(new SelectItem<>(c, c.getName() + " (Tingkat " + c.getGradeLevel() + ")"));
+            }
             addSectionCard(
                     "Perpindahan Siswa: " + studentName,
                     fullWidth(new FormField("Jenis Perpindahan", reasonCombo, true)),

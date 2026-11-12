@@ -294,7 +294,13 @@ public class SemesterPanel extends JPanel implements ScreenPage {
                 startInput.setLocalDate(editing.getStartDate());
                 endInput.setLocalDate(editing.getEndDate());
             } else if (!years.isEmpty()) {
-                AcademicYear first = years.stream().filter(AcademicYear::isActive).findFirst().orElse(years.get(0));
+                AcademicYear first = years.get(0);
+                for (AcademicYear tahun : years) {
+                    if (tahun.isActive()) {
+                        first = tahun;
+                        break;
+                    }
+                }
                 for (int i = 0; i < yearCombo.getItemCount(); i++) {
                     if (yearCombo.getItemAt(i).getValue().getId().equals(first.getId())) {
                         yearCombo.setSelectedIndex(i);

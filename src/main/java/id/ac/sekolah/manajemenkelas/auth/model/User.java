@@ -90,6 +90,10 @@ public class User {
         this.teacherId = teacherId;
     }
 
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
     }

@@ -132,8 +132,21 @@ public class HomeroomPanel extends JPanel implements ScreenPage {
                     @SuppressWarnings("unchecked")
                     List<HomeroomAssignment> assignments = (List<HomeroomAssignment>) arr[2];
 
-                    this.activeClasses = classes.stream().filter(SchoolClass::isActive).toList();
-                    this.activeTeachers = teachers.stream().filter(Teacher::isActive).toList();
+                    List<SchoolClass> daftarKelasAktif = new ArrayList<>();
+                    for (SchoolClass kelas : classes) {
+                        if (kelas.isActive()) {
+                            daftarKelasAktif.add(kelas);
+                        }
+                    }
+                    this.activeClasses = daftarKelasAktif;
+
+                    List<Teacher> daftarGuruAktif = new ArrayList<>();
+                    for (Teacher guru : teachers) {
+                        if (guru.isActive()) {
+                            daftarGuruAktif.add(guru);
+                        }
+                    }
+                    this.activeTeachers = daftarGuruAktif;
 
                     Map<Long, String> cMap = new HashMap<>();
                     for (SchoolClass c : classes) {

@@ -5,68 +5,67 @@ import java.time.LocalDate;
 
 public class AttendanceRangeReport {
 
-    private final LocalDate startDate;
-    private final LocalDate endDate;
-    private final int totalRecords;
-    private final int hadirCount;
-    private final int sakitCount;
-    private final int izinCount;
-    private final int alpaCount;
-    private final BigDecimal attendancePercentage;
+    private final LocalDate tanggalMulai;
+    private final LocalDate tanggalSelesai;
+    private final int totalCatatan;
+    private final int jumlahHadir;
+    private final int jumlahSakit;
+    private final int jumlahIzin;
+    private final int jumlahAlpa;
+    private final BigDecimal persentaseKehadiran;
 
     public AttendanceRangeReport(
-            LocalDate startDate,
-            LocalDate endDate,
-            int totalRecords,
-            int hadirCount,
-            int sakitCount,
-            int izinCount,
-            int alpaCount,
-            BigDecimal attendancePercentage) {
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.totalRecords = totalRecords;
-        this.hadirCount = hadirCount;
-        this.sakitCount = sakitCount;
-        this.izinCount = izinCount;
-        this.alpaCount = alpaCount;
-        this.attendancePercentage = attendancePercentage;
+            LocalDate tanggalMulai,
+            LocalDate tanggalSelesai,
+            int totalCatatan,
+            int jumlahHadir,
+            int jumlahSakit,
+            int jumlahIzin,
+            int jumlahAlpa,
+            BigDecimal persentaseKehadiran) {
+        this.tanggalMulai = tanggalMulai;
+        this.tanggalSelesai = tanggalSelesai;
+        this.totalCatatan = totalCatatan;
+        this.jumlahHadir = jumlahHadir;
+        this.jumlahSakit = jumlahSakit;
+        this.jumlahIzin = jumlahIzin;
+        this.jumlahAlpa = jumlahAlpa;
+        this.persentaseKehadiran = persentaseKehadiran;
     }
 
     public LocalDate getStartDate() {
-        return startDate;
+        return tanggalMulai;
     }
 
     public LocalDate getEndDate() {
-        return endDate;
+        return tanggalSelesai;
     }
 
     public int getTotalRecords() {
-        return totalRecords;
+        return totalCatatan;
     }
 
     public int getHadirCount() {
-        return hadirCount;
+        return jumlahHadir;
     }
 
     public int getSakitCount() {
-        return sakitCount;
+        return jumlahSakit;
     }
 
     public int getIzinCount() {
-        return izinCount;
+        return jumlahIzin;
     }
 
     public int getAlpaCount() {
-        return alpaCount;
+        return jumlahAlpa;
     }
 
     public BigDecimal getAttendancePercentage() {
-        return attendancePercentage;
+        return persentaseKehadiran;
     }
 
     public boolean hasSufficientData() {
-        return totalRecords > 0 && attendancePercentage != null;
+        return totalCatatan > 0 && persentaseKehadiran != null;
     }
 }
-

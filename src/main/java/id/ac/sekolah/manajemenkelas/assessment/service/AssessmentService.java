@@ -4,10 +4,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -27,12 +29,65 @@ import id.ac.sekolah.manajemenkelas.student.model.Student;
 
 public class AssessmentService {
 
-    public record StudentScoreEntry(Long studentId, BigDecimal score, String notes) {
+    public static final class StudentScoreEntry {
+
+        private final Long idSiswa;
+        private final BigDecimal nilai;
+        private final String keterangan;
+
+        public StudentScoreEntry(Long idSiswa, BigDecimal nilai, String keterangan) {
+            this.idSiswa = idSiswa;
+            this.nilai = nilai;
+            this.keterangan = keterangan;
+        }
+
+        public Long getStudentId() {
+            return idSiswa;
+        }
+
+        public BigDecimal getScore() {
+            return nilai;
+        }
+
+        public String getNotes() {
+            return keterangan;
+        }
+
+        public Long studentId() {
+            return idSiswa;
+        }
+
+        public BigDecimal score() {
+            return nilai;
+        }
+
+        public String notes() {
+            return keterangan;
+        }
+
+        @Override
+        public boolean equals(Object objekLain) {
+            if (this == objekLain) {
+                return true;
+            }
+            if (!(objekLain instanceof StudentScoreEntry)) {
+                return false;
+            }
+            StudentScoreEntry entriLain = (StudentScoreEntry) objekLain;
+            return Objects.equals(idSiswa, entriLain.idSiswa)
+                    && Objects.equals(nilai, entriLain.nilai)
+                    && Objects.equals(keterangan, entriLain.keterangan);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(idSiswa, nilai, keterangan);
+        }
     }
 
-    private static final BigDecimal MAX_DECIMAL_LIMIT = new BigDecimal("99999.99");
-    private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
-    private static final Set<String> VALID_TYPES = Set.of(
+    private static final BigDecimal BATAS_MAKSIMAL_DESIMAL = new BigDecimal("99999.99");
+    private static final BigDecimal SERATUS = new BigDecimal("100");
+    private static final Set<String> DAFTAR_JENIS_VALID = Set.of(
             Assessment.TYPE_KUIS,
             Assessment.TYPE_TUGAS,
             Assessment.TYPE_UTS,
@@ -41,502 +96,564 @@ public class AssessmentService {
             Assessment.TYPE_PROYEK,
             Assessment.TYPE_LAINNYA);
 
-    private final AssessmentDAO assessmentDAO;
-    private final AcademicDAO academicDAO;
-    private final StudentDAO studentDAO;
+    private final AssessmentDAO daoPenilaian;
+    private final AcademicDAO daoAkademik;
+    private final StudentDAO daoSiswa;
 
     public AssessmentService(
-            AssessmentDAO assessmentDAO,
-            AcademicDAO academicDAO,
-            StudentDAO studentDAO) {
-        if (assessmentDAO == null || academicDAO == null || studentDAO == null) {
+            AssessmentDAO daoPenilaian,
+            AcademicDAO daoAkademik,
+            StudentDAO daoSiswa) {
+        if (daoPenilaian == null || daoAkademik == null || daoSiswa == null) {
             throw new IllegalArgumentException("DAO dependensi AssessmentService tidak boleh null.");
         }
-        this.assessmentDAO = assessmentDAO;
-        this.academicDAO = academicDAO;
-        this.studentDAO = studentDAO;
+        this.daoPenilaian = daoPenilaian;
+        this.daoAkademik = daoAkademik;
+        this.daoSiswa = daoSiswa;
     }
 
     // ==========================================
-    // ASSESSMENT OPERATIONS
+    // OPERASI PENILAIAN (ASSESSMENT)
     // ==========================================
 
     public Assessment createAssessment(
-            Long teachingAssignmentId,
-            String title,
-            String assessmentType,
-            LocalDate assessmentDate,
-            BigDecimal maxScore,
-            String description) {
+            Long idPenugasanMengajar,
+            String judul,
+            String jenisPenilaian,
+            LocalDate tanggalPenilaian,
+            BigDecimal nilaiMaksimal,
+            String deskripsi) {
 
-        TeachingAssignment ta = requireTeachingAssignmentWriteAuthorization(teachingAssignmentId);
-        String validTitle = validateTitle(title);
-        String validType = normalizeAndValidateType(assessmentType);
-        validateAssessmentDate(assessmentDate, ta);
-        BigDecimal validMaxScore = validateAndNormalizeMaxScore(maxScore);
+        TeachingAssignment penugasanMengajar = wajibkanOtorisasiTulisPenugasanMengajar(idPenugasanMengajar);
+        String judulValid = validasiJudul(judul);
+        String jenisValid = normalisasiDanValidasiJenis(jenisPenilaian);
+        validasiTanggalPenilaian(tanggalPenilaian, penugasanMengajar);
+        BigDecimal nilaiMaksimalValid = validasiDanNormalisasiNilaiMaksimal(nilaiMaksimal);
 
-        Assessment assessment = new Assessment(
+        Assessment penilaian = new Assessment(
                 null,
-                teachingAssignmentId,
-                validTitle,
-                validType,
-                assessmentDate,
-                validMaxScore,
-                description == null ? "" : description.trim());
+                idPenugasanMengajar,
+                judulValid,
+                jenisValid,
+                tanggalPenilaian,
+                nilaiMaksimalValid,
+                deskripsi == null ? "" : deskripsi.trim());
 
-        assessmentDAO.saveAssessment(assessment);
-        return assessment;
+        daoPenilaian.saveAssessment(penilaian);
+        return penilaian;
     }
 
     public Assessment updateAssessment(
-            Long assessmentId,
-            String title,
-            String assessmentType,
-            LocalDate assessmentDate,
-            BigDecimal maxScore,
-            String description) {
+            Long idPenilaian,
+            String judul,
+            String jenisPenilaian,
+            LocalDate tanggalPenilaian,
+            BigDecimal nilaiMaksimal,
+            String deskripsi) {
 
-        if (assessmentId == null) {
+        if (idPenilaian == null) {
             throw new IllegalArgumentException("ID penilaian wajib diisi.");
         }
 
-        Assessment existing = assessmentDAO.findAssessmentById(assessmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Data penilaian tidak ditemukan."));
+        Optional<Assessment> hasilCari = daoPenilaian.findAssessmentById(idPenilaian);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data penilaian tidak ditemukan.");
+        }
+        Assessment penilaianLama = hasilCari.get();
 
-        TeachingAssignment ta = requireTeachingAssignmentWriteAuthorization(existing.getTeachingAssignmentId());
-        String validTitle = validateTitle(title);
-        String validType = normalizeAndValidateType(assessmentType);
-        validateAssessmentDate(assessmentDate, ta);
-        BigDecimal validMaxScore = validateAndNormalizeMaxScore(maxScore);
+        TeachingAssignment penugasanMengajar = wajibkanOtorisasiTulisPenugasanMengajar(
+                penilaianLama.getTeachingAssignmentId());
+        String judulValid = validasiJudul(judul);
+        String jenisValid = normalisasiDanValidasiJenis(jenisPenilaian);
+        validasiTanggalPenilaian(tanggalPenilaian, penugasanMengajar);
+        BigDecimal nilaiMaksimalValid = validasiDanNormalisasiNilaiMaksimal(nilaiMaksimal);
 
-        List<StudentScore> existingScores = assessmentDAO.findScoresByAssessmentId(assessmentId);
-        for (StudentScore score : existingScores) {
-            if (score.getScore().compareTo(validMaxScore) > 0) {
+        List<StudentScore> daftarNilaiSaatIni = daoPenilaian.findScoresByAssessmentId(idPenilaian);
+        for (StudentScore nilaiSiswa : daftarNilaiSaatIni) {
+            if (nilaiSiswa.getScore().compareTo(nilaiMaksimalValid) > 0) {
                 throw new IllegalArgumentException(
-                        "Nilai maksimal baru (" + validMaxScore + ") lebih kecil dari nilai siswa yang sudah ada ("
-                                + score.getScore() + ").");
+                        "Nilai maksimal baru (" + nilaiMaksimalValid
+                                + ") lebih kecil dari nilai siswa yang sudah ada ("
+                                + nilaiSiswa.getScore() + ").");
             }
         }
 
-        existing.setTitle(validTitle);
-        existing.setAssessmentType(validType);
-        existing.setAssessmentDate(assessmentDate);
-        existing.setMaxScore(validMaxScore);
-        existing.setDescription(description == null ? "" : description.trim());
+        penilaianLama.setTitle(judulValid);
+        penilaianLama.setAssessmentType(jenisValid);
+        penilaianLama.setAssessmentDate(tanggalPenilaian);
+        penilaianLama.setMaxScore(nilaiMaksimalValid);
+        penilaianLama.setDescription(deskripsi == null ? "" : deskripsi.trim());
 
-        assessmentDAO.updateAssessment(existing);
-        return existing;
+        daoPenilaian.updateAssessment(penilaianLama);
+        return penilaianLama;
     }
 
     public Optional<Assessment> getAssessmentById(Long id) {
-        Optional<Assessment> found = assessmentDAO.findAssessmentById(id);
-        found.ifPresent(a -> requireTeachingAssignmentReadAuthorization(a.getTeachingAssignmentId()));
-        return found;
+        Optional<Assessment> hasilCari = daoPenilaian.findAssessmentById(id);
+        if (hasilCari.isPresent()) {
+            wajibkanOtorisasiBacaPenugasanMengajar(hasilCari.get().getTeachingAssignmentId());
+        }
+        return hasilCari;
     }
 
     public List<Assessment> getAllAssessments() {
-        requireLoggedIn();
-        SessionContext session = SessionContext.getInstance();
-        List<Assessment> all = assessmentDAO.findAllAssessments();
-        if (session.hasRole(RoleMapper.ROLE_ADMIN)) {
-            return all;
+        wajibkanSudahLogin();
+        SessionContext konteksSesi = SessionContext.getInstance();
+        List<Assessment> semuaPenilaian = daoPenilaian.findAllAssessments();
+        if (konteksSesi.hasRole(RoleMapper.ROLE_ADMIN)) {
+            return semuaPenilaian;
         }
 
-        Set<Long> teacherAssignmentIds = getAuthorizedTeachingAssignmentIds(requireTeacherIdForTeacherRole(session));
-        return all.stream()
-                .filter(a -> teacherAssignmentIds.contains(a.getTeachingAssignmentId()))
-                .toList();
+        Set<Long> kumpulanIdPenugasanGuru = ambilIdPenugasanMengajarTerotorisasi(
+                wajibkanIdGuruUntukPeranGuru(konteksSesi));
+        List<Assessment> hasilFilter = new ArrayList<>();
+        for (Assessment penilaian : semuaPenilaian) {
+            if (kumpulanIdPenugasanGuru.contains(penilaian.getTeachingAssignmentId())) {
+                hasilFilter.add(penilaian);
+            }
+        }
+        return Collections.unmodifiableList(hasilFilter);
     }
 
-    public List<Assessment> getAssessmentsByTeachingAssignment(Long teachingAssignmentId) {
-        requireTeachingAssignmentReadAuthorization(teachingAssignmentId);
-        return assessmentDAO.findAssessmentsByTeachingAssignmentId(teachingAssignmentId);
+    public List<Assessment> getAssessmentsByTeachingAssignment(Long idPenugasanMengajar) {
+        wajibkanOtorisasiBacaPenugasanMengajar(idPenugasanMengajar);
+        return daoPenilaian.findAssessmentsByTeachingAssignmentId(idPenugasanMengajar);
     }
 
     // ==========================================
-    // STUDENT SCORE OPERATIONS
+    // OPERASI NILAI SISWA (STUDENT SCORE)
     // ==========================================
 
     public StudentScore recordScore(
-            Long assessmentId,
-            Long studentId,
-            BigDecimal score,
-            String notes) {
+            Long idPenilaian,
+            Long idSiswa,
+            BigDecimal nilai,
+            String keterangan) {
 
-        Assessment assessment = getAuthorizedAssessmentForWrite(assessmentId);
-        TeachingAssignment ta = requireTeachingAssignmentWriteAuthorization(assessment.getTeachingAssignmentId());
-        BigDecimal validScore = validateAndNormalizeStudentScore(score, assessment.getMaxScore());
-        validateStudentInClassOnDate(studentId, ta.getClassId(), assessment.getAssessmentDate());
+        Assessment penilaian = ambilPenilaianTerotorisasiUntukTulis(idPenilaian);
+        TeachingAssignment penugasanMengajar = wajibkanOtorisasiTulisPenugasanMengajar(
+                penilaian.getTeachingAssignmentId());
+        BigDecimal nilaiValid = validasiDanNormalisasiNilaiSiswa(nilai, penilaian.getMaxScore());
+        validasiSiswaDiKelasPadaTanggal(idSiswa, penugasanMengajar.getClassId(), penilaian.getAssessmentDate());
 
-        if (assessmentDAO.findScoreByAssessmentAndStudent(assessmentId, studentId).isPresent()) {
+        if (daoPenilaian.findScoreByAssessmentAndStudent(idPenilaian, idSiswa).isPresent()) {
             throw new IllegalArgumentException(
-                    "Nilai siswa ID " + studentId + " untuk penilaian ini sudah tercatat.");
+                    "Nilai siswa ID " + idSiswa + " untuk penilaian ini sudah tercatat.");
         }
 
-        StudentScore studentScore = new StudentScore(
+        StudentScore nilaiSiswa = new StudentScore(
                 null,
-                assessmentId,
-                studentId,
-                validScore,
-                notes == null ? "" : notes.trim(),
+                idPenilaian,
+                idSiswa,
+                nilaiValid,
+                keterangan == null ? "" : keterangan.trim(),
                 SessionContext.getInstance().getUserId());
 
-        assessmentDAO.saveScore(studentScore);
-        return studentScore;
+        daoPenilaian.saveScore(nilaiSiswa);
+        return nilaiSiswa;
     }
 
     public List<StudentScore> recordAssessmentScores(
-            Long assessmentId,
-            List<StudentScoreEntry> entries) {
+            Long idPenilaian,
+            List<StudentScoreEntry> daftarEntri) {
 
-        Assessment assessment = getAuthorizedAssessmentForWrite(assessmentId);
-        TeachingAssignment ta = requireTeachingAssignmentWriteAuthorization(assessment.getTeachingAssignmentId());
+        Assessment penilaian = ambilPenilaianTerotorisasiUntukTulis(idPenilaian);
+        TeachingAssignment penugasanMengajar = wajibkanOtorisasiTulisPenugasanMengajar(
+                penilaian.getTeachingAssignmentId());
 
-        if (entries == null || entries.isEmpty()) {
+        if (daftarEntri == null || daftarEntri.isEmpty()) {
             throw new IllegalArgumentException("Daftar nilai siswa tidak boleh kosong.");
         }
 
-        Long recordedBy = SessionContext.getInstance().getUserId();
-        Set<Long> seenStudents = new HashSet<>();
-        List<StudentScore> toSave = new ArrayList<>();
+        Long dicatatOleh = SessionContext.getInstance().getUserId();
+        Set<Long> siswaYangSudahTerlihat = new HashSet<>();
+        List<StudentScore> daftarYangAkanDisimpan = new ArrayList<>();
 
-        for (StudentScoreEntry entry : entries) {
-            if (entry == null || entry.studentId() == null) {
+        for (StudentScoreEntry entri : daftarEntri) {
+            if (entri == null || entri.getStudentId() == null) {
                 throw new IllegalArgumentException("ID siswa wajib diisi.");
             }
-            if (!seenStudents.add(entry.studentId())) {
+            if (!siswaYangSudahTerlihat.add(entri.getStudentId())) {
                 throw new IllegalArgumentException(
-                        "Siswa dengan ID " + entry.studentId() + " muncul lebih dari sekali.");
+                        "Siswa dengan ID " + entri.getStudentId() + " muncul lebih dari sekali.");
             }
 
-            BigDecimal validScore = validateAndNormalizeStudentScore(entry.score(), assessment.getMaxScore());
-            validateStudentInClassOnDate(entry.studentId(), ta.getClassId(), assessment.getAssessmentDate());
+            BigDecimal nilaiValid = validasiDanNormalisasiNilaiSiswa(entri.getScore(), penilaian.getMaxScore());
+            validasiSiswaDiKelasPadaTanggal(
+                    entri.getStudentId(),
+                    penugasanMengajar.getClassId(),
+                    penilaian.getAssessmentDate());
 
-            if (assessmentDAO.findScoreByAssessmentAndStudent(assessmentId, entry.studentId()).isPresent()) {
+            if (daoPenilaian.findScoreByAssessmentAndStudent(idPenilaian, entri.getStudentId()).isPresent()) {
                 throw new IllegalArgumentException(
-                        "Nilai siswa ID " + entry.studentId() + " untuk penilaian ini sudah tercatat.");
+                        "Nilai siswa ID " + entri.getStudentId() + " untuk penilaian ini sudah tercatat.");
             }
 
-            toSave.add(new StudentScore(
+            daftarYangAkanDisimpan.add(new StudentScore(
                     null,
-                    assessmentId,
-                    entry.studentId(),
-                    validScore,
-                    entry.notes() == null ? "" : entry.notes().trim(),
-                    recordedBy));
+                    idPenilaian,
+                    entri.getStudentId(),
+                    nilaiValid,
+                    entri.getNotes() == null ? "" : entri.getNotes().trim(),
+                    dicatatOleh));
         }
 
-        assessmentDAO.saveAllScores(toSave);
-        return toSave;
+        daoPenilaian.saveAllScores(daftarYangAkanDisimpan);
+        return daftarYangAkanDisimpan;
     }
 
-    public StudentScore updateScore(Long scoreId, BigDecimal newScore, String notes) {
-        if (scoreId == null) {
+    public StudentScore updateScore(Long idNilai, BigDecimal nilaiBaru, String keterangan) {
+        if (idNilai == null) {
             throw new IllegalArgumentException("ID nilai siswa wajib diisi.");
         }
 
-        StudentScore existing = assessmentDAO.findScoreById(scoreId)
-                .orElseThrow(() -> new IllegalArgumentException("Data nilai siswa tidak ditemukan."));
+        Optional<StudentScore> hasilCari = daoPenilaian.findScoreById(idNilai);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data nilai siswa tidak ditemukan.");
+        }
+        StudentScore nilaiLama = hasilCari.get();
 
-        Assessment assessment = getAuthorizedAssessmentForWrite(existing.getAssessmentId());
-        BigDecimal validScore = validateAndNormalizeStudentScore(newScore, assessment.getMaxScore());
+        Assessment penilaian = ambilPenilaianTerotorisasiUntukTulis(nilaiLama.getAssessmentId());
+        BigDecimal nilaiValid = validasiDanNormalisasiNilaiSiswa(nilaiBaru, penilaian.getMaxScore());
 
-        existing.setScore(validScore);
-        existing.setNotes(notes == null ? "" : notes.trim());
-        existing.setRecordedBy(SessionContext.getInstance().getUserId());
+        nilaiLama.setScore(nilaiValid);
+        nilaiLama.setNotes(keterangan == null ? "" : keterangan.trim());
+        nilaiLama.setRecordedBy(SessionContext.getInstance().getUserId());
 
-        assessmentDAO.updateScore(existing);
-        return existing;
+        daoPenilaian.updateScore(nilaiLama);
+        return nilaiLama;
     }
 
-    public Optional<StudentScore> getScoreById(Long scoreId) {
-        Optional<StudentScore> found = assessmentDAO.findScoreById(scoreId);
-        found.ifPresent(s -> getAuthorizedAssessmentForRead(s.getAssessmentId()));
-        return found;
+    public Optional<StudentScore> getScoreById(Long idNilai) {
+        Optional<StudentScore> hasilCari = daoPenilaian.findScoreById(idNilai);
+        if (hasilCari.isPresent()) {
+            ambilPenilaianTerotorisasiUntukBaca(hasilCari.get().getAssessmentId());
+        }
+        return hasilCari;
     }
 
-    public List<StudentScore> getScoresByAssessment(Long assessmentId) {
-        getAuthorizedAssessmentForRead(assessmentId);
-        return assessmentDAO.findScoresByAssessmentId(assessmentId);
+    public List<StudentScore> getScoresByAssessment(Long idPenilaian) {
+        ambilPenilaianTerotorisasiUntukBaca(idPenilaian);
+        return daoPenilaian.findScoresByAssessmentId(idPenilaian);
     }
 
-    public List<StudentScore> getScoresByStudent(Long studentId) {
-        requireLoggedIn();
-        if (studentId == null) {
+    public List<StudentScore> getScoresByStudent(Long idSiswa) {
+        wajibkanSudahLogin();
+        if (idSiswa == null) {
             throw new IllegalArgumentException("ID siswa wajib diisi.");
         }
 
-        studentDAO.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
-
-        List<StudentScore> allStudentScores = assessmentDAO.findScoresByStudentId(studentId);
-        SessionContext session = SessionContext.getInstance();
-        if (session.hasRole(RoleMapper.ROLE_ADMIN)) {
-            return allStudentScores;
+        if (daoSiswa.findById(idSiswa).isEmpty()) {
+            throw new IllegalArgumentException("Data siswa tidak ditemukan.");
         }
 
-        Long teacherId = requireTeacherIdForTeacherRole(session);
-        Set<Long> teacherAssignmentIds = getAuthorizedTeachingAssignmentIds(teacherId);
-        Set<Long> teacherActiveClassIds = getActiveTeachingClassIds(teacherId);
-
-        Map<Long, Long> assessmentToAssignment = new HashMap<>();
-        for (StudentScore score : allStudentScores) {
-            assessmentToAssignment.computeIfAbsent(score.getAssessmentId(),
-                    aid -> assessmentDAO.findAssessmentById(aid)
-                            .map(Assessment::getTeachingAssignmentId)
-                            .orElse(-1L));
+        List<StudentScore> semuaNilaiSiswa = daoPenilaian.findScoresByStudentId(idSiswa);
+        SessionContext konteksSesi = SessionContext.getInstance();
+        if (konteksSesi.hasRole(RoleMapper.ROLE_ADMIN)) {
+            return semuaNilaiSiswa;
         }
 
-        List<StudentScore> filtered = allStudentScores.stream()
-                .filter(score -> teacherAssignmentIds.contains(
-                        assessmentToAssignment.getOrDefault(score.getAssessmentId(), -1L)))
-                .toList();
+        Long idGuru = wajibkanIdGuruUntukPeranGuru(konteksSesi);
+        Set<Long> kumpulanIdPenugasanGuru = ambilIdPenugasanMengajarTerotorisasi(idGuru);
+        Set<Long> kumpulanIdKelasAktifGuru = ambilIdKelasMengajarAktif(idGuru);
 
-        boolean teachesCurrentClass = academicDAO.findActivePlacementByStudentId(studentId)
-                .map(p -> teacherActiveClassIds.contains(p.getClassId()))
-                .orElse(false);
+        Map<Long, Long> petaPenilaianKePenugasan = new HashMap<>();
+        for (StudentScore nilai : semuaNilaiSiswa) {
+            Long idPenilaian = nilai.getAssessmentId();
+            if (!petaPenilaianKePenugasan.containsKey(idPenilaian)) {
+                Optional<Assessment> penilaianOpt = daoPenilaian.findAssessmentById(idPenilaian);
+                if (penilaianOpt.isPresent()) {
+                    petaPenilaianKePenugasan.put(idPenilaian, penilaianOpt.get().getTeachingAssignmentId());
+                } else {
+                    petaPenilaianKePenugasan.put(idPenilaian, -1L);
+                }
+            }
+        }
 
-        if (!teachesCurrentClass && filtered.isEmpty()) {
+        List<StudentScore> hasilFilter = new ArrayList<>();
+        for (StudentScore nilai : semuaNilaiSiswa) {
+            Long idPenugasan = petaPenilaianKePenugasan.getOrDefault(nilai.getAssessmentId(), -1L);
+            if (kumpulanIdPenugasanGuru.contains(idPenugasan)) {
+                hasilFilter.add(nilai);
+            }
+        }
+
+        boolean mengajarKelasSaatIni = false;
+        Optional<StudentPlacement> penempatanAktifOpt = daoAkademik.findActivePlacementByStudentId(idSiswa);
+        if (penempatanAktifOpt.isPresent()) {
+            mengajarKelasSaatIni = kumpulanIdKelasAktifGuru.contains(penempatanAktifOpt.get().getClassId());
+        }
+
+        if (!mengajarKelasSaatIni && hasilFilter.isEmpty()) {
             throw new IllegalArgumentException(
                     "Akses ditolak: guru tidak memiliki penugasan mengajar untuk siswa ini.");
         }
 
-        return filtered;
+        return Collections.unmodifiableList(hasilFilter);
     }
 
     // ==========================================
-    // SUMMARIES
+    // RINGKASAN (SUMMARIES)
     // ==========================================
 
-    public AssessmentSummary getAssessmentScoreSummary(Long assessmentId) {
-        Assessment assessment = getAuthorizedAssessmentForRead(assessmentId);
-        List<StudentScore> scores = assessmentDAO.findScoresByAssessmentId(assessmentId);
+    public AssessmentSummary getAssessmentScoreSummary(Long idPenilaian) {
+        Assessment penilaian = ambilPenilaianTerotorisasiUntukBaca(idPenilaian);
+        List<StudentScore> daftarNilai = daoPenilaian.findScoresByAssessmentId(idPenilaian);
 
-        if (scores.isEmpty()) {
+        if (daftarNilai.isEmpty()) {
+            BigDecimal nol = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
             return new AssessmentSummary(
-                    assessment.getId(),
-                    assessment.getTitle(),
-                    assessment.getAssessmentType(),
-                    assessment.getMaxScore(),
+                    penilaian.getId(),
+                    penilaian.getTitle(),
+                    penilaian.getAssessmentType(),
+                    penilaian.getMaxScore(),
                     0,
-                    BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
-                    BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
-                    BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
-                    BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+                    nol,
+                    nol,
+                    nol,
+                    nol);
         }
 
-        BigDecimal sum = BigDecimal.ZERO;
-        BigDecimal highest = scores.get(0).getScore();
-        BigDecimal lowest = scores.get(0).getScore();
+        BigDecimal totalNilai = BigDecimal.ZERO;
+        BigDecimal nilaiTertinggi = daftarNilai.get(0).getScore();
+        BigDecimal nilaiTerendah = daftarNilai.get(0).getScore();
 
-        for (StudentScore item : scores) {
-            BigDecimal val = item.getScore();
-            sum = sum.add(val);
-            if (val.compareTo(highest) > 0) {
-                highest = val;
+        for (StudentScore item : daftarNilai) {
+            BigDecimal nilaiItem = item.getScore();
+            totalNilai = totalNilai.add(nilaiItem);
+            if (nilaiItem.compareTo(nilaiTertinggi) > 0) {
+                nilaiTertinggi = nilaiItem;
             }
-            if (val.compareTo(lowest) < 0) {
-                lowest = val;
+            if (nilaiItem.compareTo(nilaiTerendah) < 0) {
+                nilaiTerendah = nilaiItem;
             }
         }
 
-        BigDecimal count = BigDecimal.valueOf(scores.size());
-        BigDecimal average = sum.divide(count, 2, RoundingMode.HALF_UP);
-        BigDecimal averagePct = average.multiply(ONE_HUNDRED)
-                .divide(assessment.getMaxScore(), 2, RoundingMode.HALF_UP);
+        BigDecimal jumlahSiswa = BigDecimal.valueOf(daftarNilai.size());
+        BigDecimal rataRata = totalNilai.divide(jumlahSiswa, 2, RoundingMode.HALF_UP);
+        BigDecimal rataRataPersentase = rataRata.multiply(SERATUS)
+                .divide(penilaian.getMaxScore(), 2, RoundingMode.HALF_UP);
 
         return new AssessmentSummary(
-                assessment.getId(),
-                assessment.getTitle(),
-                assessment.getAssessmentType(),
-                assessment.getMaxScore(),
-                scores.size(),
-                average,
-                highest.setScale(2, RoundingMode.HALF_UP),
-                lowest.setScale(2, RoundingMode.HALF_UP),
-                averagePct);
+                penilaian.getId(),
+                penilaian.getTitle(),
+                penilaian.getAssessmentType(),
+                penilaian.getMaxScore(),
+                daftarNilai.size(),
+                rataRata,
+                nilaiTertinggi.setScale(2, RoundingMode.HALF_UP),
+                nilaiTerendah.setScale(2, RoundingMode.HALF_UP),
+                rataRataPersentase);
     }
 
-    public StudentScoreSummary getStudentScoreSummary(Long studentId) {
-        List<StudentScore> visibleScores = getScoresByStudent(studentId);
-        if (visibleScores.isEmpty()) {
-            BigDecimal zero = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-            return new StudentScoreSummary(studentId, 0, zero, zero, zero, zero);
+    public StudentScoreSummary getStudentScoreSummary(Long idSiswa) {
+        List<StudentScore> daftarNilaiTerlihat = getScoresByStudent(idSiswa);
+        if (daftarNilaiTerlihat.isEmpty()) {
+            BigDecimal nol = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            return new StudentScoreSummary(idSiswa, 0, nol, nol, nol, nol);
         }
 
-        BigDecimal totalEarned = BigDecimal.ZERO;
-        BigDecimal totalMax = BigDecimal.ZERO;
+        BigDecimal totalDiperoleh = BigDecimal.ZERO;
+        BigDecimal totalMaksimal = BigDecimal.ZERO;
 
-        for (StudentScore score : visibleScores) {
-            totalEarned = totalEarned.add(score.getScore());
-            BigDecimal maxScore = assessmentDAO.findAssessmentById(score.getAssessmentId())
-                    .map(Assessment::getMaxScore)
-                    .orElse(BigDecimal.ZERO);
-            totalMax = totalMax.add(maxScore);
+        for (StudentScore nilai : daftarNilaiTerlihat) {
+            totalDiperoleh = totalDiperoleh.add(nilai.getScore());
+            Optional<Assessment> penilaianOpt = daoPenilaian.findAssessmentById(nilai.getAssessmentId());
+            BigDecimal nilaiMaksimal = BigDecimal.ZERO;
+            if (penilaianOpt.isPresent()) {
+                nilaiMaksimal = penilaianOpt.get().getMaxScore();
+            }
+            totalMaksimal = totalMaksimal.add(nilaiMaksimal);
         }
 
-        BigDecimal count = BigDecimal.valueOf(visibleScores.size());
-        BigDecimal average = totalEarned.divide(count, 2, RoundingMode.HALF_UP);
-        BigDecimal overallPct = totalMax.compareTo(BigDecimal.ZERO) > 0
-                ? totalEarned.multiply(ONE_HUNDRED).divide(totalMax, 2, RoundingMode.HALF_UP)
+        BigDecimal jumlahPenilaian = BigDecimal.valueOf(daftarNilaiTerlihat.size());
+        BigDecimal rataRata = totalDiperoleh.divide(jumlahPenilaian, 2, RoundingMode.HALF_UP);
+        BigDecimal persentaseKeseluruhan = totalMaksimal.compareTo(BigDecimal.ZERO) > 0
+                ? totalDiperoleh.multiply(SERATUS).divide(totalMaksimal, 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
 
         return new StudentScoreSummary(
-                studentId,
-                visibleScores.size(),
-                totalEarned.setScale(2, RoundingMode.HALF_UP),
-                totalMax.setScale(2, RoundingMode.HALF_UP),
-                average,
-                overallPct);
+                idSiswa,
+                daftarNilaiTerlihat.size(),
+                totalDiperoleh.setScale(2, RoundingMode.HALF_UP),
+                totalMaksimal.setScale(2, RoundingMode.HALF_UP),
+                rataRata,
+                persentaseKeseluruhan);
     }
 
     // ==========================================
-    // AUTHORIZATION & VALIDATION HELPERS
+    // METODE BANTU OTORISASI & VALIDASI
     // ==========================================
 
-    private void requireLoggedIn() {
+    private void wajibkanSudahLogin() {
         if (!SessionContext.getInstance().isLoggedIn()) {
             throw new IllegalArgumentException("Silakan login terlebih dahulu untuk mengakses penilaian.");
         }
     }
 
-    private Long requireTeacherIdForTeacherRole(SessionContext session) {
-        if (!session.hasRole(RoleMapper.ROLE_TEACHER)) {
+    private Long wajibkanIdGuruUntukPeranGuru(SessionContext konteksSesi) {
+        if (!konteksSesi.hasRole(RoleMapper.ROLE_TEACHER)) {
             throw new IllegalArgumentException("Akses ditolak: peran tidak diizinkan.");
         }
-        Long teacherId = session.getTeacherId();
-        if (teacherId == null) {
+        Long idGuru = konteksSesi.getTeacherId();
+        if (idGuru == null) {
             throw new IllegalArgumentException(
                     "Akses ditolak: akun guru belum terhubung dengan profil guru.");
         }
-        return teacherId;
+        return idGuru;
     }
 
-    private TeachingAssignment requireTeachingAssignmentWriteAuthorization(Long teachingAssignmentId) {
-        TeachingAssignment ta = requireTeachingAssignmentReadAuthorization(teachingAssignmentId);
-        if (!ta.isActive()) {
+    private TeachingAssignment wajibkanOtorisasiTulisPenugasanMengajar(Long idPenugasanMengajar) {
+        TeachingAssignment penugasan = wajibkanOtorisasiBacaPenugasanMengajar(idPenugasanMengajar);
+        if (!penugasan.isActive()) {
             throw new IllegalArgumentException("Penugasan mengajar sudah tidak aktif.");
         }
-        return ta;
+        return penugasan;
     }
 
-    private TeachingAssignment requireTeachingAssignmentReadAuthorization(Long teachingAssignmentId) {
-        requireLoggedIn();
-        if (teachingAssignmentId == null) {
+    private TeachingAssignment wajibkanOtorisasiBacaPenugasanMengajar(Long idPenugasanMengajar) {
+        wajibkanSudahLogin();
+        if (idPenugasanMengajar == null) {
             throw new IllegalArgumentException("ID penugasan mengajar wajib diisi.");
         }
 
-        TeachingAssignment ta = academicDAO.findTeachingAssignmentById(teachingAssignmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Data penugasan mengajar tidak ditemukan."));
+        Optional<TeachingAssignment> hasilCari = daoAkademik.findTeachingAssignmentById(idPenugasanMengajar);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data penugasan mengajar tidak ditemukan.");
+        }
+        TeachingAssignment penugasan = hasilCari.get();
 
-        SessionContext session = SessionContext.getInstance();
-        if (session.hasRole(RoleMapper.ROLE_ADMIN)) {
-            return ta;
+        SessionContext konteksSesi = SessionContext.getInstance();
+        if (konteksSesi.hasRole(RoleMapper.ROLE_ADMIN)) {
+            return penugasan;
         }
 
-        Long teacherId = requireTeacherIdForTeacherRole(session);
-        if (!teacherId.equals(ta.getTeacherId())) {
+        Long idGuru = wajibkanIdGuruUntukPeranGuru(konteksSesi);
+        if (!idGuru.equals(penugasan.getTeacherId())) {
             throw new IllegalArgumentException(
                     "Akses ditolak: guru hanya dapat mengakses penilaian untuk penugasan mengajar miliknya.");
         }
-        return ta;
+        return penugasan;
     }
 
-    private Assessment getAuthorizedAssessmentForWrite(Long assessmentId) {
-        if (assessmentId == null) {
+    private Assessment ambilPenilaianTerotorisasiUntukTulis(Long idPenilaian) {
+        if (idPenilaian == null) {
             throw new IllegalArgumentException("ID penilaian wajib diisi.");
         }
-        Assessment assessment = assessmentDAO.findAssessmentById(assessmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Data penilaian tidak ditemukan."));
-        requireTeachingAssignmentWriteAuthorization(assessment.getTeachingAssignmentId());
-        return assessment;
+        Optional<Assessment> hasilCari = daoPenilaian.findAssessmentById(idPenilaian);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data penilaian tidak ditemukan.");
+        }
+        Assessment penilaian = hasilCari.get();
+        wajibkanOtorisasiTulisPenugasanMengajar(penilaian.getTeachingAssignmentId());
+        return penilaian;
     }
 
-    private Assessment getAuthorizedAssessmentForRead(Long assessmentId) {
-        if (assessmentId == null) {
+    private Assessment ambilPenilaianTerotorisasiUntukBaca(Long idPenilaian) {
+        if (idPenilaian == null) {
             throw new IllegalArgumentException("ID penilaian wajib diisi.");
         }
-        Assessment assessment = assessmentDAO.findAssessmentById(assessmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Data penilaian tidak ditemukan."));
-        requireTeachingAssignmentReadAuthorization(assessment.getTeachingAssignmentId());
-        return assessment;
+        Optional<Assessment> hasilCari = daoPenilaian.findAssessmentById(idPenilaian);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data penilaian tidak ditemukan.");
+        }
+        Assessment penilaian = hasilCari.get();
+        wajibkanOtorisasiBacaPenugasanMengajar(penilaian.getTeachingAssignmentId());
+        return penilaian;
     }
 
-    private Set<Long> getAuthorizedTeachingAssignmentIds(Long teacherId) {
-        Set<Long> ids = new HashSet<>();
-        academicDAO.findTeachingAssignmentsByTeacherId(teacherId)
-                .forEach(ta -> ids.add(ta.getId()));
-        return ids;
+    private Set<Long> ambilIdPenugasanMengajarTerotorisasi(Long idGuru) {
+        Set<Long> kumpulanId = new HashSet<>();
+        List<TeachingAssignment> daftarPenugasan = daoAkademik.findTeachingAssignmentsByTeacherId(idGuru);
+        for (TeachingAssignment penugasan : daftarPenugasan) {
+            kumpulanId.add(penugasan.getId());
+        }
+        return kumpulanId;
     }
 
-    private Set<Long> getActiveTeachingClassIds(Long teacherId) {
-        Set<Long> classIds = new HashSet<>();
-        academicDAO.findTeachingAssignmentsByTeacherId(teacherId).stream()
-                .filter(TeachingAssignment::isActive)
-                .forEach(ta -> classIds.add(ta.getClassId()));
-        return classIds;
+    private Set<Long> ambilIdKelasMengajarAktif(Long idGuru) {
+        Set<Long> kumpulanIdKelas = new HashSet<>();
+        List<TeachingAssignment> daftarPenugasan = daoAkademik.findTeachingAssignmentsByTeacherId(idGuru);
+        for (TeachingAssignment penugasan : daftarPenugasan) {
+            if (penugasan.isActive()) {
+                kumpulanIdKelas.add(penugasan.getClassId());
+            }
+        }
+        return kumpulanIdKelas;
     }
 
-    private void validateStudentInClassOnDate(Long studentId, Long classId, LocalDate assessmentDate) {
-        if (studentId == null) {
+    private void validasiSiswaDiKelasPadaTanggal(Long idSiswa, Long idKelas, LocalDate tanggalPenilaian) {
+        if (idSiswa == null) {
             throw new IllegalArgumentException("ID siswa wajib diisi.");
         }
 
-        Student student = studentDAO.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
-        if (!student.isActive()) {
+        Optional<Student> hasilCariSiswa = daoSiswa.findById(idSiswa);
+        if (hasilCariSiswa.isEmpty()) {
+            throw new IllegalArgumentException("Data siswa tidak ditemukan.");
+        }
+        Student siswa = hasilCariSiswa.get();
+        if (!siswa.isActive()) {
             throw new IllegalArgumentException("Siswa tidak aktif.");
         }
 
-        List<StudentPlacement> history = academicDAO.findPlacementHistoryByStudentId(studentId);
-        boolean movedToAnotherClassOnDate = history.stream()
-                .anyMatch(p -> !p.getClassId().equals(classId)
-                        && p.getEntryDate().equals(assessmentDate));
+        List<StudentPlacement> riwayatPenempatan = daoAkademik.findPlacementHistoryByStudentId(idSiswa);
+        boolean pindahKeKelasLainPadaTanggal = false;
+        boolean terdaftarDiKelasPadaTanggal = false;
 
-        boolean belongsToClassOnDate = history.stream()
-                .filter(p -> p.getClassId().equals(classId))
-                .anyMatch(p -> !assessmentDate.isBefore(p.getEntryDate())
-                        && (p.getExitDate() == null || !assessmentDate.isAfter(p.getExitDate())));
+        for (StudentPlacement penempatan : riwayatPenempatan) {
+            if (!penempatan.getClassId().equals(idKelas)
+                    && penempatan.getEntryDate().equals(tanggalPenilaian)) {
+                pindahKeKelasLainPadaTanggal = true;
+            }
+            if (penempatan.getClassId().equals(idKelas)) {
+                boolean mulaiSebelumAtauPadaTanggal = !tanggalPenilaian.isBefore(penempatan.getEntryDate());
+                boolean belumKeluarAtauKeluarSetelahnya = penempatan.getExitDate() == null
+                        || !tanggalPenilaian.isAfter(penempatan.getExitDate());
+                if (mulaiSebelumAtauPadaTanggal && belumKeluarAtauKeluarSetelahnya) {
+                    terdaftarDiKelasPadaTanggal = true;
+                }
+            }
+        }
 
-        if (!belongsToClassOnDate || movedToAnotherClassOnDate) {
+        if (!terdaftarDiKelasPadaTanggal || pindahKeKelasLainPadaTanggal) {
             throw new IllegalArgumentException(
-                    "Siswa ID " + studentId + " tidak terdaftar pada kelas ID " + classId
-                            + " pada tanggal penilaian " + assessmentDate + ".");
+                    "Siswa ID " + idSiswa + " tidak terdaftar pada kelas ID " + idKelas
+                            + " pada tanggal penilaian " + tanggalPenilaian + ".");
         }
     }
 
-    private static String validateTitle(String title) {
-        if (title == null || title.isBlank()) {
+    private static String validasiJudul(String judul) {
+        if (judul == null || judul.isBlank()) {
             throw new IllegalArgumentException("Judul penilaian wajib diisi.");
         }
-        String trimmed = title.trim();
-        if (trimmed.length() > 150) {
+        String judulRapih = judul.trim();
+        if (judulRapih.length() > 150) {
             throw new IllegalArgumentException("Judul penilaian maksimal 150 karakter.");
         }
-        return trimmed;
+        return judulRapih;
     }
 
-    private static String normalizeAndValidateType(String assessmentType) {
-        if (assessmentType == null || assessmentType.isBlank()) {
+    private static String normalisasiDanValidasiJenis(String jenisPenilaian) {
+        if (jenisPenilaian == null || jenisPenilaian.isBlank()) {
             throw new IllegalArgumentException("Jenis penilaian wajib diisi.");
         }
-        String normalized = assessmentType.trim().toUpperCase();
-        if (!VALID_TYPES.contains(normalized)) {
+        String jenisNormal = jenisPenilaian.trim().toUpperCase();
+        if (!DAFTAR_JENIS_VALID.contains(jenisNormal)) {
             throw new IllegalArgumentException(
                     "Jenis penilaian tidak valid. Pilihan: KUIS, TUGAS, UTS, UAS, PRAKTIK, PROYEK, LAINNYA.");
         }
-        return normalized;
+        return jenisNormal;
     }
 
-    private void validateAssessmentDate(LocalDate assessmentDate, TeachingAssignment ta) {
-        if (assessmentDate == null) {
+    private void validasiTanggalPenilaian(LocalDate tanggalPenilaian, TeachingAssignment penugasanMengajar) {
+        if (tanggalPenilaian == null) {
             throw new IllegalArgumentException("Tanggal penilaian wajib diisi.");
         }
-        Optional<Semester> semesterOpt = academicDAO.findSemesterById(ta.getSemesterId());
+        Optional<Semester> semesterOpt = daoAkademik.findSemesterById(penugasanMengajar.getSemesterId());
         if (semesterOpt.isPresent()) {
             Semester semester = semesterOpt.get();
-            if (assessmentDate.isBefore(semester.getStartDate())
-                    || assessmentDate.isAfter(semester.getEndDate())) {
+            if (tanggalPenilaian.isBefore(semester.getStartDate())
+                    || tanggalPenilaian.isAfter(semester.getEndDate())) {
                 throw new IllegalArgumentException(
                         "Tanggal penilaian harus berada dalam rentang semester ("
                                 + semester.getStartDate() + " s.d. " + semester.getEndDate() + ").");
@@ -544,25 +661,24 @@ public class AssessmentService {
         }
     }
 
-    private static BigDecimal validateAndNormalizeMaxScore(BigDecimal maxScore) {
-        if (maxScore == null || maxScore.compareTo(BigDecimal.ZERO) <= 0) {
+    private static BigDecimal validasiDanNormalisasiNilaiMaksimal(BigDecimal nilaiMaksimal) {
+        if (nilaiMaksimal == null || nilaiMaksimal.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Nilai maksimal harus lebih besar dari 0.");
         }
-        if (maxScore.compareTo(MAX_DECIMAL_LIMIT) > 0) {
+        if (nilaiMaksimal.compareTo(BATAS_MAKSIMAL_DESIMAL) > 0) {
             throw new IllegalArgumentException("Nilai maksimal melebihi batas (99999.99).");
         }
-        return maxScore.setScale(2, RoundingMode.HALF_UP);
+        return nilaiMaksimal.setScale(2, RoundingMode.HALF_UP);
     }
 
-    private static BigDecimal validateAndNormalizeStudentScore(BigDecimal score, BigDecimal maxScore) {
-        if (score == null) {
+    private static BigDecimal validasiDanNormalisasiNilaiSiswa(BigDecimal nilai, BigDecimal nilaiMaksimal) {
+        if (nilai == null) {
             throw new IllegalArgumentException("Nilai siswa wajib diisi.");
         }
-        if (score.compareTo(BigDecimal.ZERO) < 0 || score.compareTo(maxScore) > 0) {
+        if (nilai.compareTo(BigDecimal.ZERO) < 0 || nilai.compareTo(nilaiMaksimal) > 0) {
             throw new IllegalArgumentException(
-                    "Nilai siswa harus berada di antara 0 dan nilai maksimal (" + maxScore + ").");
+                    "Nilai siswa harus berada di antara 0 dan nilai maksimal (" + nilaiMaksimal + ").");
         }
-        return score.setScale(2, RoundingMode.HALF_UP);
+        return nilai.setScale(2, RoundingMode.HALF_UP);
     }
 }
-

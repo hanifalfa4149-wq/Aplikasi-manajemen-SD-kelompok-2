@@ -19,7 +19,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import id.ac.sekolah.manajemenkelas.academic.dao.InMemoryAcademicDAO;
 import id.ac.sekolah.manajemenkelas.academic.dao.PostgresAcademicDAO;
 import id.ac.sekolah.manajemenkelas.academic.model.AcademicYear;
 import id.ac.sekolah.manajemenkelas.academic.model.SchoolClass;
@@ -27,11 +26,9 @@ import id.ac.sekolah.manajemenkelas.academic.model.Semester;
 import id.ac.sekolah.manajemenkelas.academic.model.Subject;
 import id.ac.sekolah.manajemenkelas.academic.model.TeachingAssignment;
 import id.ac.sekolah.manajemenkelas.academic.service.AcademicService;
-import id.ac.sekolah.manajemenkelas.assessment.dao.InMemoryAssessmentDAO;
 import id.ac.sekolah.manajemenkelas.assessment.dao.PostgresAssessmentDAO;
 import id.ac.sekolah.manajemenkelas.assessment.model.Assessment;
 import id.ac.sekolah.manajemenkelas.assessment.service.AssessmentService;
-import id.ac.sekolah.manajemenkelas.attendance.dao.InMemoryAttendanceDAO;
 import id.ac.sekolah.manajemenkelas.attendance.dao.PostgresAttendanceDAO;
 import id.ac.sekolah.manajemenkelas.attendance.model.Attendance;
 import id.ac.sekolah.manajemenkelas.attendance.service.AttendanceService;
@@ -45,7 +42,6 @@ import id.ac.sekolah.manajemenkelas.core.security.PasswordHasher;
 import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
 import id.ac.sekolah.manajemenkelas.dashboard.model.DashboardSummary;
 import id.ac.sekolah.manajemenkelas.dashboard.service.DashboardService;
-import id.ac.sekolah.manajemenkelas.report.dao.InMemoryReportDAO;
 import id.ac.sekolah.manajemenkelas.report.dao.PostgresReportDAO;
 import id.ac.sekolah.manajemenkelas.report.model.AssessmentReport;
 import id.ac.sekolah.manajemenkelas.report.model.AttendanceRangeReport;
@@ -55,11 +51,9 @@ import id.ac.sekolah.manajemenkelas.report.model.GenderStudentCountReport;
 import id.ac.sekolah.manajemenkelas.report.model.StudentScoreReport;
 import id.ac.sekolah.manajemenkelas.report.model.SubjectScoreReport;
 import id.ac.sekolah.manajemenkelas.report.service.ReportService;
-import id.ac.sekolah.manajemenkelas.student.dao.InMemoryStudentDAO;
 import id.ac.sekolah.manajemenkelas.student.dao.PostgresStudentDAO;
 import id.ac.sekolah.manajemenkelas.student.model.Student;
 import id.ac.sekolah.manajemenkelas.student.service.StudentService;
-import id.ac.sekolah.manajemenkelas.teacher.dao.InMemoryTeacherDAO;
 import id.ac.sekolah.manajemenkelas.teacher.dao.PostgresTeacherDAO;
 import id.ac.sekolah.manajemenkelas.teacher.model.Teacher;
 import id.ac.sekolah.manajemenkelas.teacher.service.TeacherService;
@@ -413,50 +407,5 @@ class PostgresReportDAOIntegrationTest {
         createAndLoginTeacherUser(null, "test_p6_guru_unlinked", "Guru Tanpa Link");
         assertThrows(IllegalArgumentException.class, () -> dashboardService.getDashboardSummary());
         assertThrows(IllegalArgumentException.class, () -> reportService.getStudentCountsByClass());
-    }
-
-    @Test
-    void emptyInMemoryDatasetsAndZeroDivisionAreHandledDeterministically() {
-        SessionContext.getInstance().startSession(1L, null, "admin", "Administrator", RoleMapper.ROLE_ADMIN);
-
-        InMemoryStudentDAO studentDAO = new InMemoryStudentDAO();
-        InMemoryTeacherDAO teacherDAO = new InMemoryTeacherDAO();
-        InMemoryAcademicDAO academicDAO = new InMemoryAcademicDAO();
-        InMemoryAttendanceDAO attendanceDAO = new InMemoryAttendanceDAO();
-        InMemoryAssessmentDAO assessmentDAO = new InMemoryAssessmentDAO();
-        InMemoryReportDAO reportDAO = new InMemoryReportDAO(
-                studentDAO, teacherDAO, academicDAO, attendanceDAO, assessmentDAO);
-
-        DashboardService dashboardService = new DashboardService(reportDAO);
-        ReportService reportService = new ReportService(reportDAO, studentDAO);
-
-        // Completely empty dataset checks
-        DashboardSummary emptyDash = dashboardService.getDashboardSummary();
-        assertEquals(0, emptyDash.getTotalActiveStudents());
-        assertEquals(0, emptyDash.getTotalActiveTeachers());
-        assertEquals(0, emptyDash.getTotalActiveClasses());
-        assertFalse(emptyDash.hasAttendanceData());
-        assertNull(emptyDash.getOverallAttendancePercentage());
-
-        assertTrue(reportService.getStudentCountsByClass().isEmpty());
-        List<GenderStudentCountReport> genders = reportService.getStudentCountsByGender();
-        assertEquals(2, genders.size());
-        assertEquals(0, genders.get(0).getActiveStudentCount());
-        assertEquals(0, genders.get(1).getActiveStudentCount());
-
-        AttendanceRangeReport emptyAtt = reportService.getAttendanceSummaryByDateRange(
-                LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
-        assertEquals(0, emptyAtt.getTotalRecords());
-        assertFalse(emptyAtt.hasSufficientData());
-        assertNull(emptyAtt.getAttendancePercentage());
-
-        assertTrue(reportService.getAttendanceSummaryByClass().isEmpty());
-        assertTrue(reportService.getAssessmentSummaries().isEmpty());
-        assertTrue(reportService.getStudentScoreSummaries().isEmpty());
-        assertTrue(reportService.getAverageScoresBySubject().isEmpty());
-
-        // Invalid date range rejected cleanly
-        assertThrows(IllegalArgumentException.class, () -> reportService.getAttendanceSummaryByDateRange(
-                LocalDate.of(2026, 8, 10), LocalDate.of(2026, 8, 1)));
     }
 }

@@ -200,7 +200,13 @@ public class AssessmentPanel extends JPanel implements ScreenPage {
                     Map<Long, String> labels = (Map<Long, String>) arr[2];
 
                     this.allAssessments = assessments;
-                    this.scopedActiveAssignments = allTas.stream().filter(TeachingAssignment::isActive).toList();
+                    List<TeachingAssignment> penugasanAktif = new ArrayList<>();
+                    for (TeachingAssignment ta : allTas) {
+                        if (ta.isActive()) {
+                            penugasanAktif.add(ta);
+                        }
+                    }
+                    this.scopedActiveAssignments = penugasanAktif;
                     this.assignmentLabels = labels;
 
                     updatingFilters = true;

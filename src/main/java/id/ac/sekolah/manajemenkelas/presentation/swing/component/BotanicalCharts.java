@@ -20,7 +20,43 @@ import id.ac.sekolah.manajemenkelas.presentation.swing.theme.BotanicalTheme;
  */
 public final class BotanicalCharts {
 
-    public record ChartItem(String label, double value, Color color) {
+    /**
+     * Item data untuk grafik batang maupun donut.
+     */
+    public static final class ChartItem {
+        private final String label;
+        private final double value;
+        private final Color color;
+
+        public ChartItem(String label, double value, Color color) {
+            this.label = label;
+            this.value = value;
+            this.color = color;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public double getValue() {
+            return value;
+        }
+
+        public Color getColor() {
+            return color;
+        }
+
+        public String label() {
+            return label;
+        }
+
+        public double value() {
+            return value;
+        }
+
+        public Color color() {
+            return color;
+        }
     }
 
     private BotanicalCharts() {
@@ -160,7 +196,10 @@ public final class BotanicalCharts {
 
                 int w = getWidth();
                 int h = getHeight();
-                double total = items.stream().mapToDouble(i -> Math.max(0, i.value())).sum();
+                double total = 0;
+                for (ChartItem item : items) {
+                    total += Math.max(0, item.value());
+                }
                 if (items.isEmpty() || total <= 0) {
                     drawEmptyMessage(g2, w, h, "Belum ada data proporsi.");
                     return;

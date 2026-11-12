@@ -1,6 +1,8 @@
 package id.ac.sekolah.manajemenkelas.teacher.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,168 +12,183 @@ import id.ac.sekolah.manajemenkelas.teacher.model.Teacher;
 
 public class TeacherService {
 
-    private final TeacherDAO teacherDAO;
+    private final TeacherDAO daoGuru;
 
-    public TeacherService(TeacherDAO teacherDAO) {
-        this.teacherDAO = teacherDAO;
+    public TeacherService(TeacherDAO daoGuru) {
+        this.daoGuru = daoGuru;
     }
 
     public Teacher createTeacher(
             String nip,
-            String fullName,
-            String gender,
+            String namaLengkap,
+            String jenisKelamin,
             String email,
-            String phone,
-            String address,
-            String education,
-            LocalDate joinDate) {
+            String nomorTelepon,
+            String alamat,
+            String pendidikan,
+            LocalDate tanggalBergabung) {
 
         SessionContext.getInstance().requireAdminIfAuthenticated("guru");
 
-        validateTeacherData(
-                nip, fullName, gender,
-                email, address, education, joinDate);
+        validasiDataGuru(
+                nip, namaLengkap, jenisKelamin,
+                email, alamat, pendidikan, tanggalBergabung);
 
-        if (teacherDAO.existsByNip(nip.trim())) {
+        if (daoGuru.existsByNip(nip.trim())) {
             throw new IllegalArgumentException("NIP sudah terdaftar.");
         }
 
-        String normalizedEmail = email == null ? "" : email.trim();
-        if (!normalizedEmail.isEmpty()) {
-            boolean emailUsed = teacherDAO.findAll().stream()
-                    .anyMatch(teacher -> teacher.getEmail() != null
-                            && teacher.getEmail().equalsIgnoreCase(normalizedEmail));
-            if (emailUsed) {
-                throw new IllegalArgumentException("Email sudah terdaftar.");
+        String emailNormal = email == null ? "" : email.trim();
+        if (!emailNormal.isEmpty()) {
+            List<Teacher> semuaGuru = daoGuru.findAll();
+            for (Teacher guru : semuaGuru) {
+                if (guru.getEmail() != null && guru.getEmail().equalsIgnoreCase(emailNormal)) {
+                    throw new IllegalArgumentException("Email sudah terdaftar.");
+                }
             }
         }
 
-        Teacher teacher = new Teacher(
+        Teacher guru = new Teacher(
                 null,
                 nip.trim(),
-                fullName.trim(),
-                gender.trim().toUpperCase(),
-                normalizedEmail,
-                phone == null ? "" : phone.trim(),
-                address.trim(),
-                education.trim(),
-                joinDate,
+                namaLengkap.trim(),
+                jenisKelamin.trim().toUpperCase(),
+                emailNormal,
+                nomorTelepon == null ? "" : nomorTelepon.trim(),
+                alamat.trim(),
+                pendidikan.trim(),
+                tanggalBergabung,
                 true);
 
-        teacherDAO.save(teacher);
+        daoGuru.save(guru);
 
-        return teacher;
+        return guru;
     }
 
     public List<Teacher> getAllTeachers() {
-        return teacherDAO.findAll();
+        return daoGuru.findAll();
     }
 
     public Optional<Teacher> getTeacherById(Long id) {
-        return teacherDAO.findById(id);
+        return daoGuru.findById(id);
     }
 
     public Teacher updateTeacher(
             Long id,
             String nip,
-            String fullName,
-            String gender,
+            String namaLengkap,
+            String jenisKelamin,
             String email,
-            String phone,
-            String address,
-            String education,
-            LocalDate joinDate) {
+            String nomorTelepon,
+            String alamat,
+            String pendidikan,
+            LocalDate tanggalBergabung) {
 
         SessionContext.getInstance().requireAdminIfAuthenticated("guru");
 
-        Teacher existing = teacherDAO.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Data guru tidak ditemukan."));
+        Optional<Teacher> hasilCari = daoGuru.findById(id);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data guru tidak ditemukan.");
+        }
+        Teacher guruLama = hasilCari.get();
 
-        validateTeacherData(
-                nip, fullName, gender,
-                email, address, education, joinDate);
+        validasiDataGuru(
+                nip, namaLengkap, jenisKelamin,
+                email, alamat, pendidikan, tanggalBergabung);
 
-        Optional<Teacher> nipOwner = teacherDAO.findByNip(nip.trim());
+        Optional<Teacher> pemilikNip = daoGuru.findByNip(nip.trim());
 
-        if (nipOwner.isPresent()
-                && !nipOwner.get().getId().equals(id)) {
+        if (pemilikNip.isPresent()
+                && !pemilikNip.get().getId().equals(id)) {
             throw new IllegalArgumentException("NIP sudah digunakan guru lain.");
         }
 
-        String normalizedEmail = email == null ? "" : email.trim();
-        if (!normalizedEmail.isEmpty()) {
-            boolean emailUsedByOther = teacherDAO.findAll().stream()
-                    .anyMatch(teacher -> !teacher.getId().equals(id)
-                            && teacher.getEmail() != null
-                            && teacher.getEmail().equalsIgnoreCase(normalizedEmail));
-            if (emailUsedByOther) {
-                throw new IllegalArgumentException("Email sudah digunakan guru lain.");
+        String emailNormal = email == null ? "" : email.trim();
+        if (!emailNormal.isEmpty()) {
+            List<Teacher> semuaGuru = daoGuru.findAll();
+            for (Teacher guru : semuaGuru) {
+                if (!guru.getId().equals(id)
+                        && guru.getEmail() != null
+                        && guru.getEmail().equalsIgnoreCase(emailNormal)) {
+                    throw new IllegalArgumentException("Email sudah digunakan guru lain.");
+                }
             }
         }
 
-        existing.setNip(nip.trim());
-        existing.setFullName(fullName.trim());
-        existing.setGender(gender.trim().toUpperCase());
-        existing.setEmail(normalizedEmail);
-        existing.setPhone(phone == null ? "" : phone.trim());
-        existing.setAddress(address.trim());
-        existing.setEducation(education.trim());
-        existing.setJoinDate(joinDate);
+        guruLama.setNip(nip.trim());
+        guruLama.setFullName(namaLengkap.trim());
+        guruLama.setGender(jenisKelamin.trim().toUpperCase());
+        guruLama.setEmail(emailNormal);
+        guruLama.setPhone(nomorTelepon == null ? "" : nomorTelepon.trim());
+        guruLama.setAddress(alamat.trim());
+        guruLama.setEducation(pendidikan.trim());
+        guruLama.setJoinDate(tanggalBergabung);
 
-        teacherDAO.update(existing);
+        daoGuru.update(guruLama);
 
-        return existing;
+        return guruLama;
     }
 
     public void deleteTeacher(Long id) {
 
         SessionContext.getInstance().requireAdminIfAuthenticated("guru");
 
-        Teacher teacher = teacherDAO.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Data guru tidak ditemukan."));
+        Optional<Teacher> hasilCari = daoGuru.findById(id);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data guru tidak ditemukan.");
+        }
+        Teacher guru = hasilCari.get();
 
-        teacher.setActive(false);
-        teacherDAO.update(teacher);
+        guru.setActive(false);
+        daoGuru.update(guru);
     }
 
-    public List<Teacher> searchTeachers(String keyword) {
+    public List<Teacher> searchTeachers(String kataKunci) {
 
-        if (keyword == null || keyword.isBlank()) {
+        if (kataKunci == null || kataKunci.isBlank()) {
             return getAllTeachers();
         }
 
-        String search = keyword.trim().toLowerCase();
+        String kataKunciKecil = kataKunci.trim().toLowerCase();
+        List<Teacher> semuaGuru = daoGuru.findAll();
+        List<Teacher> hasilPencarian = new ArrayList<>();
 
-        return teacherDAO.findAll().stream()
-                .filter(teacher -> (teacher.getFullName() != null
-                                && teacher.getFullName().toLowerCase().contains(search))
-                        || (teacher.getNip() != null
-                                && teacher.getNip().toLowerCase().contains(search))
-                        || (teacher.getEmail() != null
-                                && teacher.getEmail().toLowerCase().contains(search)))
-                .toList();
+        for (Teacher guru : semuaGuru) {
+            boolean cocokNama = guru.getFullName() != null
+                    && guru.getFullName().toLowerCase().contains(kataKunciKecil);
+            boolean cocokNip = guru.getNip() != null
+                    && guru.getNip().toLowerCase().contains(kataKunciKecil);
+            boolean cocokEmail = guru.getEmail() != null
+                    && guru.getEmail().toLowerCase().contains(kataKunciKecil);
+
+            if (cocokNama || cocokNip || cocokEmail) {
+                hasilPencarian.add(guru);
+            }
+        }
+
+        return Collections.unmodifiableList(hasilPencarian);
     }
 
-    private void validateTeacherData(
+    private void validasiDataGuru(
             String nip,
-            String fullName,
-            String gender,
+            String namaLengkap,
+            String jenisKelamin,
             String email,
-            String address,
-            String education,
-            LocalDate joinDate) {
+            String alamat,
+            String pendidikan,
+            LocalDate tanggalBergabung) {
 
         if (nip == null || nip.isBlank()) {
             throw new IllegalArgumentException("NIP wajib diisi.");
         }
 
-        if (fullName == null || fullName.isBlank()) {
+        if (namaLengkap == null || namaLengkap.isBlank()) {
             throw new IllegalArgumentException("Nama guru wajib diisi.");
         }
 
-        if (gender == null
-                || (!gender.equalsIgnoreCase("L")
-                        && !gender.equalsIgnoreCase("P"))) {
+        if (jenisKelamin == null
+                || (!jenisKelamin.equalsIgnoreCase("L")
+                        && !jenisKelamin.equalsIgnoreCase("P"))) {
             throw new IllegalArgumentException("Jenis kelamin harus L atau P.");
         }
 
@@ -180,15 +197,15 @@ public class TeacherService {
             throw new IllegalArgumentException("Format email tidak valid.");
         }
 
-        if (address == null || address.isBlank()) {
+        if (alamat == null || alamat.isBlank()) {
             throw new IllegalArgumentException("Alamat wajib diisi.");
         }
 
-        if (education == null || education.isBlank()) {
+        if (pendidikan == null || pendidikan.isBlank()) {
             throw new IllegalArgumentException("Pendidikan terakhir wajib diisi.");
         }
 
-        if (joinDate == null || joinDate.isAfter(LocalDate.now())) {
+        if (tanggalBergabung == null || tanggalBergabung.isAfter(LocalDate.now())) {
             throw new IllegalArgumentException("Tanggal bergabung tidak valid.");
         }
     }

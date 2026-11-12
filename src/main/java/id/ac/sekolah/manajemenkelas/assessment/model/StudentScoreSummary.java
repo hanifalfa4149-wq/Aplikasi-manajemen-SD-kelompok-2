@@ -4,50 +4,49 @@ import java.math.BigDecimal;
 
 public class StudentScoreSummary {
 
-    private final Long studentId;
-    private final int totalAssessments;
-    private final BigDecimal totalEarnedScore;
-    private final BigDecimal totalMaxScore;
-    private final BigDecimal averageScore;
-    private final BigDecimal overallPercentage;
+    private final Long idSiswa;
+    private final int totalPenilaian;
+    private final BigDecimal totalNilaiDiperoleh;
+    private final BigDecimal totalNilaiMaksimal;
+    private final BigDecimal rataRataNilai;
+    private final BigDecimal persentaseKeseluruhan;
 
     public StudentScoreSummary(
-            Long studentId,
-            int totalAssessments,
-            BigDecimal totalEarnedScore,
-            BigDecimal totalMaxScore,
-            BigDecimal averageScore,
-            BigDecimal overallPercentage) {
-        this.studentId = studentId;
-        this.totalAssessments = totalAssessments;
-        this.totalEarnedScore = totalEarnedScore;
-        this.totalMaxScore = totalMaxScore;
-        this.averageScore = averageScore;
-        this.overallPercentage = overallPercentage;
+            Long idSiswa,
+            int totalPenilaian,
+            BigDecimal totalNilaiDiperoleh,
+            BigDecimal totalNilaiMaksimal,
+            BigDecimal rataRataNilai,
+            BigDecimal persentaseKeseluruhan) {
+        this.idSiswa = idSiswa;
+        this.totalPenilaian = totalPenilaian;
+        this.totalNilaiDiperoleh = totalNilaiDiperoleh;
+        this.totalNilaiMaksimal = totalNilaiMaksimal;
+        this.rataRataNilai = rataRataNilai;
+        this.persentaseKeseluruhan = persentaseKeseluruhan;
     }
 
     public Long getStudentId() {
-        return studentId;
+        return idSiswa;
     }
 
     public int getTotalAssessments() {
-        return totalAssessments;
+        return totalPenilaian;
     }
 
     public BigDecimal getTotalEarnedScore() {
-        return totalEarnedScore;
+        return totalNilaiDiperoleh;
     }
 
     public BigDecimal getTotalMaxScore() {
-        return totalMaxScore;
+        return totalNilaiMaksimal;
     }
 
     public BigDecimal getAverageScore() {
-        return averageScore;
+        return rataRataNilai;
     }
 
     public BigDecimal getOverallPercentage() {
-        return overallPercentage;
+        return persentaseKeseluruhan;
     }
 }
-

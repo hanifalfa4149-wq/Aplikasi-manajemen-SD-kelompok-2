@@ -138,20 +138,9 @@ public class LoginPanel extends JPanel {
         content.add(desc);
         content.add(Box.createVerticalStrut(28));
 
-        StatusBadge dbBadge = container.isUsingPostgres()
-                ? new StatusBadge("TERHUBUNG KE POSTGRESQL", StatusBadge.Style.MINT)
-                : new StatusBadge("MODE FALLBACK IN-MEMORY", StatusBadge.Style.WARNING);
+        StatusBadge dbBadge = new StatusBadge("TERHUBUNG KE POSTGRESQL", StatusBadge.Style.MINT);
         dbBadge.setAlignmentX(LEFT_ALIGNMENT);
         content.add(dbBadge);
-
-        if (container.getPersistenceWarning() != null) {
-            content.add(Box.createVerticalStrut(10));
-            JLabel warn = new JLabel("<html><div style='width:340px'>" + container.getPersistenceWarning() + "</div></html>");
-            warn.setFont(BotanicalTheme.FONT_SMALL);
-            warn.setForeground(BotanicalTheme.WARNING);
-            warn.setAlignmentX(LEFT_ALIGNMENT);
-            content.add(warn);
-        }
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.anchor = GridBagConstraints.WEST;

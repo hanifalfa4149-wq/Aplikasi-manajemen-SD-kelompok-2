@@ -2,6 +2,7 @@ package id.ac.sekolah.manajemenkelas.report.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
 import id.ac.sekolah.manajemenkelas.report.dao.ReportDAO;
@@ -16,70 +17,74 @@ import id.ac.sekolah.manajemenkelas.student.dao.StudentDAO;
 
 public class ReportService {
 
-    private final ReportDAO reportDAO;
-    private final StudentDAO studentDAO;
+    private final ReportDAO daoLaporan;
+    private final StudentDAO daoSiswa;
 
-    public ReportService(ReportDAO reportDAO, StudentDAO studentDAO) {
-        if (reportDAO == null || studentDAO == null) {
+    public ReportService(ReportDAO daoLaporan, StudentDAO daoSiswa) {
+        if (daoLaporan == null || daoSiswa == null) {
             throw new IllegalArgumentException("Dependensi ReportService tidak boleh null.");
         }
-        this.reportDAO = reportDAO;
-        this.studentDAO = studentDAO;
+        this.daoLaporan = daoLaporan;
+        this.daoSiswa = daoSiswa;
     }
 
     public List<ClassStudentCountReport> getStudentCountsByClass() {
-        return reportDAO.findActiveStudentCountsByClass(resolveScope());
+        return daoLaporan.findActiveStudentCountsByClass(tentukanCakupanGuru());
     }
 
     public List<GenderStudentCountReport> getStudentCountsByGender() {
-        return reportDAO.findActiveStudentCountsByGender(resolveScope());
+        return daoLaporan.findActiveStudentCountsByGender(tentukanCakupanGuru());
     }
 
-    public AttendanceRangeReport getAttendanceSummaryByDateRange(LocalDate startDate, LocalDate endDate) {
-        validateDateRange(startDate, endDate);
-        return reportDAO.findAttendanceSummaryByDateRange(startDate, endDate, resolveScope());
+    public AttendanceRangeReport getAttendanceSummaryByDateRange(LocalDate tanggalMulai, LocalDate tanggalSelesai) {
+        validasiRentangTanggal(tanggalMulai, tanggalSelesai);
+        return daoLaporan.findAttendanceSummaryByDateRange(tanggalMulai, tanggalSelesai, tentukanCakupanGuru());
     }
 
     public List<ClassAttendanceReport> getAttendanceSummaryByClass() {
-        return reportDAO.findAttendanceSummariesByClass(null, null, resolveScope());
+        return daoLaporan.findAttendanceSummariesByClass(null, null, tentukanCakupanGuru());
     }
 
-    public List<ClassAttendanceReport> getAttendanceSummaryByClass(LocalDate startDate, LocalDate endDate) {
-        validateDateRange(startDate, endDate);
-        return reportDAO.findAttendanceSummariesByClass(startDate, endDate, resolveScope());
+    public List<ClassAttendanceReport> getAttendanceSummaryByClass(LocalDate tanggalMulai, LocalDate tanggalSelesai) {
+        validasiRentangTanggal(tanggalMulai, tanggalSelesai);
+        return daoLaporan.findAttendanceSummariesByClass(tanggalMulai, tanggalSelesai, tentukanCakupanGuru());
     }
 
     public List<AssessmentReport> getAssessmentSummaries() {
-        return reportDAO.findAssessmentSummaries(resolveScope());
+        return daoLaporan.findAssessmentSummaries(tentukanCakupanGuru());
     }
 
     public List<StudentScoreReport> getStudentScoreSummaries() {
-        return reportDAO.findStudentScoreSummaries(resolveScope());
+        return daoLaporan.findStudentScoreSummaries(tentukanCakupanGuru());
     }
 
-    public StudentScoreReport getStudentScoreSummary(Long studentId) {
-        Long teacherScope = resolveScope();
-        if (studentId == null) {
+    public StudentScoreReport getStudentScoreSummary(Long idSiswa) {
+        Long idCakupanGuru = tentukanCakupanGuru();
+        if (idSiswa == null) {
             throw new IllegalArgumentException("ID siswa wajib diisi.");
         }
-        studentDAO.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
+        if (daoSiswa.findById(idSiswa).isEmpty()) {
+            throw new IllegalArgumentException("Data siswa tidak ditemukan.");
+        }
 
-        return reportDAO.findStudentScoreSummaryByStudentId(studentId, teacherScope)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Akses ditolak atau siswa tidak aktif dalam cakupan akses Anda."));
+        Optional<StudentScoreReport> hasilCari = daoLaporan.findStudentScoreSummaryByStudentId(idSiswa, idCakupanGuru);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Akses ditolak atau siswa tidak aktif dalam cakupan akses Anda.");
+        }
+        return hasilCari.get();
     }
 
     public List<SubjectScoreReport> getAverageScoresBySubject() {
-        return reportDAO.findAverageScoresBySubject(resolveScope());
+        return daoLaporan.findAverageScoresBySubject(tentukanCakupanGuru());
     }
 
-    private Long resolveScope() {
+    private Long tentukanCakupanGuru() {
         return SessionContext.getInstance().resolveTeacherScopeOrNullForAdmin("laporan");
     }
 
-    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null || endDate.isBefore(startDate)) {
+    private void validasiRentangTanggal(LocalDate tanggalMulai, LocalDate tanggalSelesai) {
+        if (tanggalMulai == null || tanggalSelesai == null || tanggalSelesai.isBefore(tanggalMulai)) {
             throw new IllegalArgumentException("Rentang tanggal laporan tidak valid.");
         }
     }

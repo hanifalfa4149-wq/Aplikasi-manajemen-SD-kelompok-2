@@ -2,26 +2,25 @@ package id.ac.sekolah.manajemenkelas.report.model;
 
 public class GenderStudentCountReport {
 
-    private final String genderCode;
-    private final String genderLabel;
-    private final int activeStudentCount;
+    private final String kodeJenisKelamin;
+    private final String labelJenisKelamin;
+    private final int jumlahSiswaAktif;
 
-    public GenderStudentCountReport(String genderCode, String genderLabel, int activeStudentCount) {
-        this.genderCode = genderCode;
-        this.genderLabel = genderLabel;
-        this.activeStudentCount = activeStudentCount;
+    public GenderStudentCountReport(String kodeJenisKelamin, String labelJenisKelamin, int jumlahSiswaAktif) {
+        this.kodeJenisKelamin = kodeJenisKelamin;
+        this.labelJenisKelamin = labelJenisKelamin;
+        this.jumlahSiswaAktif = jumlahSiswaAktif;
     }
 
     public String getGenderCode() {
-        return genderCode;
+        return kodeJenisKelamin;
     }
 
     public String getGenderLabel() {
-        return genderLabel;
+        return labelJenisKelamin;
     }
 
     public int getActiveStudentCount() {
-        return activeStudentCount;
+        return jumlahSiswaAktif;
     }
 }
-

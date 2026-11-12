@@ -6,37 +6,36 @@ public class Teacher {
 
     private Long id;
     private String nip;
-    private String fullName;
-    private String gender;
+    private String namaLengkap;
+    private String jenisKelamin;
     private String email;
-    private String phone;
-    private String address;
-    private String education;
-    private LocalDate joinDate;
-    private boolean active;
+    private String nomorTelepon;
+    private String alamat;
+    private String pendidikan;
+    private LocalDate tanggalBergabung;
+    private boolean aktif;
 
     public Teacher(
             Long id,
             String nip,
-            String fullName,
-            String gender,
+            String namaLengkap,
+            String jenisKelamin,
             String email,
-            String phone,
-            String address,
-            String education,
-            LocalDate joinDate,
-            boolean active
-    ) {
+            String nomorTelepon,
+            String alamat,
+            String pendidikan,
+            LocalDate tanggalBergabung,
+            boolean aktif) {
         this.id = id;
         this.nip = nip;
-        this.fullName = fullName;
-        this.gender = gender;
+        this.namaLengkap = namaLengkap;
+        this.jenisKelamin = jenisKelamin;
         this.email = email;
-        this.phone = phone;
-        this.address = address;
-        this.education = education;
-        this.joinDate = joinDate;
-        this.active = active;
+        this.nomorTelepon = nomorTelepon;
+        this.alamat = alamat;
+        this.pendidikan = pendidikan;
+        this.tanggalBergabung = tanggalBergabung;
+        this.aktif = aktif;
     }
 
     public Long getId() {
@@ -52,11 +51,11 @@ public class Teacher {
     }
 
     public String getFullName() {
-        return fullName;
+        return namaLengkap;
     }
 
     public String getGender() {
-        return gender;
+        return jenisKelamin;
     }
 
     public String getEmail() {
@@ -64,58 +63,58 @@ public class Teacher {
     }
 
     public String getPhone() {
-        return phone;
+        return nomorTelepon;
     }
 
     public String getAddress() {
-        return address;
+        return alamat;
     }
 
     public String getEducation() {
-        return education;
+        return pendidikan;
     }
 
     public LocalDate getJoinDate() {
-        return joinDate;
+        return tanggalBergabung;
     }
 
     public boolean isActive() {
-        return active;
+        return aktif;
     }
 
     public void setNip(String nip) {
         this.nip = nip;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public void setFullName(String namaLengkap) {
+        this.namaLengkap = namaLengkap;
     }
 
-    public void setGender(String gender) {
-        this.gender = gender;
+    public void setGender(String jenisKelamin) {
+        this.jenisKelamin = jenisKelamin;
     }
 
     public void setEmail(String email) {
         this.email = email;
     }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
+    public void setPhone(String nomorTelepon) {
+        this.nomorTelepon = nomorTelepon;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setAddress(String alamat) {
+        this.alamat = alamat;
     }
 
-    public void setEducation(String education) {
-        this.education = education;
+    public void setEducation(String pendidikan) {
+        this.pendidikan = pendidikan;
     }
 
-    public void setJoinDate(LocalDate joinDate) {
-        this.joinDate = joinDate;
+    public void setJoinDate(LocalDate tanggalBergabung) {
+        this.tanggalBergabung = tanggalBergabung;
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
+    public void setActive(boolean aktif) {
+        this.aktif = aktif;
     }
 }

@@ -17,7 +17,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import id.ac.sekolah.manajemenkelas.academic.dao.InMemoryAcademicDAO;
 import id.ac.sekolah.manajemenkelas.academic.dao.PostgresAcademicDAO;
 import id.ac.sekolah.manajemenkelas.academic.model.AcademicYear;
 import id.ac.sekolah.manajemenkelas.academic.model.SchoolClass;
@@ -25,7 +24,6 @@ import id.ac.sekolah.manajemenkelas.academic.model.Semester;
 import id.ac.sekolah.manajemenkelas.academic.model.StudentPlacement;
 import id.ac.sekolah.manajemenkelas.academic.model.Subject;
 import id.ac.sekolah.manajemenkelas.academic.service.AcademicService;
-import id.ac.sekolah.manajemenkelas.attendance.dao.InMemoryAttendanceDAO;
 import id.ac.sekolah.manajemenkelas.attendance.dao.PostgresAttendanceDAO;
 import id.ac.sekolah.manajemenkelas.attendance.model.Attendance;
 import id.ac.sekolah.manajemenkelas.attendance.model.AttendanceSummary;
@@ -38,11 +36,9 @@ import id.ac.sekolah.manajemenkelas.auth.service.AuthService;
 import id.ac.sekolah.manajemenkelas.config.DatabaseConfig;
 import id.ac.sekolah.manajemenkelas.core.security.PasswordHasher;
 import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
-import id.ac.sekolah.manajemenkelas.student.dao.InMemoryStudentDAO;
 import id.ac.sekolah.manajemenkelas.student.dao.PostgresStudentDAO;
 import id.ac.sekolah.manajemenkelas.student.model.Student;
 import id.ac.sekolah.manajemenkelas.student.service.StudentService;
-import id.ac.sekolah.manajemenkelas.teacher.dao.InMemoryTeacherDAO;
 import id.ac.sekolah.manajemenkelas.teacher.dao.PostgresTeacherDAO;
 import id.ac.sekolah.manajemenkelas.teacher.model.Teacher;
 import id.ac.sekolah.manajemenkelas.teacher.service.TeacherService;
@@ -371,37 +367,5 @@ class PostgresAttendanceDAOIntegrationTest {
         // Teacher user without id_guru cannot manage attendance
         createAndLoginTeacherUser(null, "test_p4_guru_unlinked", "Guru Tanpa Link");
         assertThrows(IllegalArgumentException.class, () -> attendanceService.getAttendanceByClass(class1A.getId()));
-    }
-
-    @Test
-    void inMemoryAttendanceFallbackWorksForCoreWorkflows() {
-        SessionContext.getInstance().startSession(1L, null, "admin", "Administrator", RoleMapper.ROLE_ADMIN);
-
-        InMemoryStudentDAO studentDAO = new InMemoryStudentDAO();
-        InMemoryAcademicDAO academicDAO = new InMemoryAcademicDAO();
-        InMemoryTeacherDAO teacherDAO = new InMemoryTeacherDAO();
-        InMemoryAttendanceDAO attendanceDAO = new InMemoryAttendanceDAO();
-
-        StudentService studentService = new StudentService(studentDAO);
-        AcademicService academicService = new AcademicService(academicDAO, studentDAO, teacherDAO);
-        AttendanceService attendanceService = new AttendanceService(attendanceDAO, academicDAO, studentDAO);
-
-        Student s1 = studentService.createStudent(
-                "INMEM_01", "INMEM_NISN_01", "Raka", "L",
-                LocalDate.of(2016, 1, 10), "Pekanbaru", "Jl. Sudirman", "Ibu Nia", "08129999");
-        AcademicYear year = academicService.createAcademicYear(
-                "2026/2027", LocalDate.of(2026, 7, 1), LocalDate.of(2027, 6, 30));
-        SchoolClass schoolClass = academicService.createClass(year.getId(), "1A", 1, 25);
-        academicService.placeStudentInClass(s1.getId(), schoolClass.getId(), LocalDate.of(2026, 7, 10));
-
-        Attendance recorded = attendanceService.recordAttendance(
-                s1.getId(), schoolClass.getId(), LocalDate.of(2026, 8, 1), Attendance.STATUS_IZIN, "Lomba");
-        assertNotNull(recorded.getId());
-        assertFalse(attendanceService.getAttendanceByDate(LocalDate.of(2026, 8, 1)).isEmpty());
-
-        AttendanceSummary summary = attendanceService.getClassAttendanceSummary(
-                schoolClass.getId(), LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
-        assertEquals(1, summary.getIzinCount());
-        assertEquals(1, summary.getTotalRecords());
     }
 }

@@ -7,6 +7,7 @@ import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -50,15 +51,69 @@ import id.ac.sekolah.manajemenkelas.student.model.Student;
  */
 public class DashboardPanel extends JPanel implements ScreenPage {
 
-    private record DashboardPayload(
-            DashboardSummary summary,
-            List<ClassStudentCountReport> classCounts,
-            List<GenderStudentCountReport> genderCounts,
-            List<ClassAttendanceReport> classAttendance,
-            List<Attendance> todayAttendance,
-            List<Assessment> recentAssessments,
-            Map<Long, String> studentNames,
-            Map<Long, String> classNames) {
+    /**
+     * Paket data yang dimuat secara asinkron untuk mengisi komponen dashboard.
+     */
+    private static final class DashboardPayload {
+        private final DashboardSummary summary;
+        private final List<ClassStudentCountReport> classCounts;
+        private final List<GenderStudentCountReport> genderCounts;
+        private final List<ClassAttendanceReport> classAttendance;
+        private final List<Attendance> todayAttendance;
+        private final List<Assessment> recentAssessments;
+        private final Map<Long, String> studentNames;
+        private final Map<Long, String> classNames;
+
+        private DashboardPayload(
+                DashboardSummary summary,
+                List<ClassStudentCountReport> classCounts,
+                List<GenderStudentCountReport> genderCounts,
+                List<ClassAttendanceReport> classAttendance,
+                List<Attendance> todayAttendance,
+                List<Assessment> recentAssessments,
+                Map<Long, String> studentNames,
+                Map<Long, String> classNames) {
+            this.summary = summary;
+            this.classCounts = classCounts;
+            this.genderCounts = genderCounts;
+            this.classAttendance = classAttendance;
+            this.todayAttendance = todayAttendance;
+            this.recentAssessments = recentAssessments;
+            this.studentNames = studentNames;
+            this.classNames = classNames;
+        }
+
+        private DashboardSummary summary() {
+            return summary;
+        }
+
+        private List<ClassStudentCountReport> classCounts() {
+            return classCounts;
+        }
+
+        private List<GenderStudentCountReport> genderCounts() {
+            return genderCounts;
+        }
+
+        private List<ClassAttendanceReport> classAttendance() {
+            return classAttendance;
+        }
+
+        private List<Attendance> todayAttendance() {
+            return todayAttendance;
+        }
+
+        private List<Assessment> recentAssessments() {
+            return recentAssessments;
+        }
+
+        private Map<Long, String> studentNames() {
+            return studentNames;
+        }
+
+        private Map<Long, String> classNames() {
+            return classNames;
+        }
     }
 
     private final ApplicationContainer container;
@@ -246,11 +301,31 @@ public class DashboardPanel extends JPanel implements ScreenPage {
         List<GenderStudentCountReport> genderCounts = container.getReportService().getStudentCountsByGender();
         List<ClassAttendanceReport> classAttendance = container.getReportService().getAttendanceSummaryByClass();
         List<Attendance> todayAttendance = container.getAttendanceService().getAttendanceByDate(LocalDate.now());
-        List<Assessment> assessments = container.getAssessmentService().getAllAssessments().stream()
-                .sorted(Comparator.comparing(Assessment::getAssessmentDate).reversed()
-                        .thenComparing(Assessment::getId, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(6)
-                .toList();
+        List<Assessment> semuaPenilaian = new ArrayList<>(container.getAssessmentService().getAllAssessments());
+        Collections.sort(semuaPenilaian, new Comparator<Assessment>() {
+            @Override
+            public int compare(Assessment a1, Assessment a2) {
+                int bandingTanggal = a2.getAssessmentDate().compareTo(a1.getAssessmentDate());
+                if (bandingTanggal != 0) {
+                    return bandingTanggal;
+                }
+                if (a1.getId() == null && a2.getId() == null) {
+                    return 0;
+                }
+                if (a1.getId() == null) {
+                    return 1;
+                }
+                if (a2.getId() == null) {
+                    return -1;
+                }
+                return a2.getId().compareTo(a1.getId());
+            }
+        });
+        List<Assessment> assessments = new ArrayList<>();
+        int batasMaksimal = Math.min(6, semuaPenilaian.size());
+        for (int i = 0; i < batasMaksimal; i++) {
+            assessments.add(semuaPenilaian.get(i));
+        }
 
         Map<Long, String> studentNames = new HashMap<>();
         for (Student s : container.getStudentService().getAllStudents()) {

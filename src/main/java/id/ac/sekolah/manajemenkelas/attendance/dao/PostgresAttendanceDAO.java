@@ -200,15 +200,34 @@ public class PostgresAttendanceDAO implements AttendanceDAO {
             return;
         }
 
-        JdbcUtils.inTransactionVoid(conn -> {
-            try {
-                for (Attendance attendance : attendances) {
-                    insertSingle(conn, attendance);
-                }
-            } catch (SQLException e) {
-                throw translateSqlException("Gagal menyimpan absensi massal kelas.", e);
+        Connection koneksi = null;
+        boolean autoCommitAwal = true;
+        try {
+            koneksi = DatabaseConfig.getConnection();
+            autoCommitAwal = koneksi.getAutoCommit();
+            koneksi.setAutoCommit(false);
+
+            for (Attendance attendance : attendances) {
+                insertSingle(koneksi, attendance);
             }
-        });
+
+            koneksi.commit();
+        } catch (SQLException e) {
+            JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+            throw translateSqlException("Gagal menyimpan absensi massal kelas.", e);
+        } catch (RuntimeException e) {
+            JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+            throw e;
+        } finally {
+            JdbcUtils.pulihkanAutoCommitDenganAman(koneksi, autoCommitAwal);
+            if (koneksi != null) {
+                try {
+                    koneksi.close();
+                } catch (SQLException ignored) {
+                    // Abaikan kegagalan menutup koneksi saat cleanup
+                }
+            }
+        }
     }
 
     @Override

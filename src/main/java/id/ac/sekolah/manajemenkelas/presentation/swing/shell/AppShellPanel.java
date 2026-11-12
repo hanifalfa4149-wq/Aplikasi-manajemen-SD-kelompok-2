@@ -41,9 +41,7 @@ public class AppShellPanel extends JPanel {
     public AppShellPanel(ApplicationContainer container, Runnable onLogoutCompleted) {
         this.container = container;
         this.onLogoutCompleted = onLogoutCompleted;
-        this.persistenceBadge = container.isUsingPostgres()
-                ? new StatusBadge("POSTGRESQL", StatusBadge.Style.SUCCESS)
-                : new StatusBadge("INMEMORY", StatusBadge.Style.WARNING);
+        this.persistenceBadge = new StatusBadge("POSTGRESQL", StatusBadge.Style.SUCCESS);
 
         setLayout(new BorderLayout());
         setBackground(BotanicalTheme.SOFT_IVORY);

@@ -1,6 +1,8 @@
 package id.ac.sekolah.manajemenkelas.student.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,150 +12,164 @@ import id.ac.sekolah.manajemenkelas.student.model.Student;
 
 public class StudentService {
 
-    private final StudentDAO studentDAO;
+    private final StudentDAO daoSiswa;
 
-    public StudentService(StudentDAO studentDAO) {
-        this.studentDAO = studentDAO;
+    public StudentService(StudentDAO daoSiswa) {
+        this.daoSiswa = daoSiswa;
     }
 
     public Student createStudent(
             String nis,
             String nisn,
-            String fullName,
-            String gender,
-            LocalDate birthDate,
-            String birthPlace,
-            String address,
-            String parentName,
-            String parentPhone) {
+            String namaLengkap,
+            String jenisKelamin,
+            LocalDate tanggalLahir,
+            String tempatLahir,
+            String alamat,
+            String namaOrangTua,
+            String teleponOrangTua) {
 
         SessionContext.getInstance().requireAdminIfAuthenticated("siswa");
 
-        validateStudentData(
-                nis, nisn, fullName, gender,
-                birthDate, birthPlace, address);
+        validasiDataSiswa(
+                nis, nisn, namaLengkap, jenisKelamin,
+                tanggalLahir, tempatLahir, alamat);
 
-        if (studentDAO.existsByNis(nis.trim())) {
+        if (daoSiswa.existsByNis(nis.trim())) {
             throw new IllegalArgumentException("NIS sudah terdaftar.");
         }
 
-        if (studentDAO.existsByNisn(nisn.trim())) {
+        if (daoSiswa.existsByNisn(nisn.trim())) {
             throw new IllegalArgumentException("NISN sudah terdaftar.");
         }
 
-        Student student = new Student(
+        Student siswa = new Student(
                 null,
                 nis.trim(),
                 nisn.trim(),
-                fullName.trim(),
-                gender.trim().toUpperCase(),
-                birthDate,
-                birthPlace.trim(),
-                address.trim(),
-                parentName == null ? "" : parentName.trim(),
-                parentPhone == null ? "" : parentPhone.trim(),
+                namaLengkap.trim(),
+                jenisKelamin.trim().toUpperCase(),
+                tanggalLahir,
+                tempatLahir.trim(),
+                alamat.trim(),
+                namaOrangTua == null ? "" : namaOrangTua.trim(),
+                teleponOrangTua == null ? "" : teleponOrangTua.trim(),
                 true);
 
-        studentDAO.save(student);
+        daoSiswa.save(siswa);
 
-        return student;
+        return siswa;
     }
 
     public List<Student> getAllStudents() {
-        return studentDAO.findAll();
+        return daoSiswa.findAll();
     }
 
     public Optional<Student> getStudentById(Long id) {
-        return studentDAO.findById(id);
+        return daoSiswa.findById(id);
     }
 
     public Student updateStudent(
             Long id,
             String nis,
             String nisn,
-            String fullName,
-            String gender,
-            LocalDate birthDate,
-            String birthPlace,
-            String address,
-            String parentName,
-            String parentPhone) {
+            String namaLengkap,
+            String jenisKelamin,
+            LocalDate tanggalLahir,
+            String tempatLahir,
+            String alamat,
+            String namaOrangTua,
+            String teleponOrangTua) {
 
         SessionContext.getInstance().requireAdminIfAuthenticated("siswa");
 
-        Student existing = studentDAO.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
+        Optional<Student> hasilCari = daoSiswa.findById(id);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data siswa tidak ditemukan.");
+        }
+        Student siswaLama = hasilCari.get();
 
-        validateStudentData(
-                nis, nisn, fullName, gender,
-                birthDate, birthPlace, address);
+        validasiDataSiswa(
+                nis, nisn, namaLengkap, jenisKelamin,
+                tanggalLahir, tempatLahir, alamat);
 
-        Optional<Student> nisOwner = studentDAO.findByNis(nis.trim());
+        Optional<Student> pemilikNis = daoSiswa.findByNis(nis.trim());
 
-        if (nisOwner.isPresent()
-                && !nisOwner.get().getId().equals(id)) {
+        if (pemilikNis.isPresent()
+                && !pemilikNis.get().getId().equals(id)) {
             throw new IllegalArgumentException("NIS sudah digunakan siswa lain.");
         }
 
-        Optional<Student> nisnOwner = studentDAO.findByNisn(nisn.trim());
+        Optional<Student> pemilikNisn = daoSiswa.findByNisn(nisn.trim());
 
-        if (nisnOwner.isPresent()
-                && !nisnOwner.get().getId().equals(id)) {
+        if (pemilikNisn.isPresent()
+                && !pemilikNisn.get().getId().equals(id)) {
             throw new IllegalArgumentException("NISN sudah digunakan siswa lain.");
         }
 
-        existing.setNis(nis.trim());
-        existing.setNisn(nisn.trim());
-        existing.setFullName(fullName.trim());
-        existing.setGender(gender.trim().toUpperCase());
-        existing.setBirthDate(birthDate);
-        existing.setBirthPlace(birthPlace.trim());
-        existing.setAddress(address.trim());
-        existing.setParentName(parentName == null ? "" : parentName.trim());
-        existing.setParentPhone(parentPhone == null ? "" : parentPhone.trim());
+        siswaLama.setNis(nis.trim());
+        siswaLama.setNisn(nisn.trim());
+        siswaLama.setFullName(namaLengkap.trim());
+        siswaLama.setGender(jenisKelamin.trim().toUpperCase());
+        siswaLama.setBirthDate(tanggalLahir);
+        siswaLama.setBirthPlace(tempatLahir.trim());
+        siswaLama.setAddress(alamat.trim());
+        siswaLama.setParentName(namaOrangTua == null ? "" : namaOrangTua.trim());
+        siswaLama.setParentPhone(teleponOrangTua == null ? "" : teleponOrangTua.trim());
 
-        studentDAO.update(existing);
+        daoSiswa.update(siswaLama);
 
-        return existing;
+        return siswaLama;
     }
 
     public void deleteStudent(Long id) {
 
         SessionContext.getInstance().requireAdminIfAuthenticated("siswa");
 
-        Student student = studentDAO.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
+        Optional<Student> hasilCari = daoSiswa.findById(id);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data siswa tidak ditemukan.");
+        }
+        Student siswa = hasilCari.get();
 
-        student.setActive(false);
-        studentDAO.update(student);
+        siswa.setActive(false);
+        daoSiswa.update(siswa);
     }
 
-    public List<Student> searchStudents(String keyword) {
+    public List<Student> searchStudents(String kataKunci) {
 
-        if (keyword == null || keyword.isBlank()) {
+        if (kataKunci == null || kataKunci.isBlank()) {
             return getAllStudents();
         }
 
-        String search = keyword.trim().toLowerCase();
+        String kataKunciKecil = kataKunci.trim().toLowerCase();
+        List<Student> semuaSiswa = daoSiswa.findAll();
+        List<Student> hasilPencarian = new ArrayList<>();
 
-        return studentDAO.findAll().stream()
-                .filter(student -> (student.getFullName() != null
-                                && student.getFullName().toLowerCase().contains(search))
-                        || (student.getNis() != null
-                                && student.getNis().toLowerCase().contains(search))
-                        || (student.getNisn() != null
-                                && student.getNisn().toLowerCase().contains(search)))
-                .toList();
+        for (Student siswa : semuaSiswa) {
+            boolean cocokNama = siswa.getFullName() != null
+                    && siswa.getFullName().toLowerCase().contains(kataKunciKecil);
+            boolean cocokNis = siswa.getNis() != null
+                    && siswa.getNis().toLowerCase().contains(kataKunciKecil);
+            boolean cocokNisn = siswa.getNisn() != null
+                    && siswa.getNisn().toLowerCase().contains(kataKunciKecil);
+
+            if (cocokNama || cocokNis || cocokNisn) {
+                hasilPencarian.add(siswa);
+            }
+        }
+
+        return Collections.unmodifiableList(hasilPencarian);
     }
 
-    private void validateStudentData(
+    private void validasiDataSiswa(
             String nis,
             String nisn,
-            String fullName,
-            String gender,
-            LocalDate birthDate,
-            String birthPlace,
-            String address) {
+            String namaLengkap,
+            String jenisKelamin,
+            LocalDate tanggalLahir,
+            String tempatLahir,
+            String alamat) {
 
         if (nis == null || nis.isBlank()) {
             throw new IllegalArgumentException("NIS wajib diisi.");
@@ -163,25 +179,25 @@ public class StudentService {
             throw new IllegalArgumentException("NISN wajib diisi.");
         }
 
-        if (fullName == null || fullName.isBlank()) {
+        if (namaLengkap == null || namaLengkap.isBlank()) {
             throw new IllegalArgumentException("Nama siswa wajib diisi.");
         }
 
-        if (gender == null
-                || (!gender.equalsIgnoreCase("L")
-                        && !gender.equalsIgnoreCase("P"))) {
+        if (jenisKelamin == null
+                || (!jenisKelamin.equalsIgnoreCase("L")
+                        && !jenisKelamin.equalsIgnoreCase("P"))) {
             throw new IllegalArgumentException("Jenis kelamin harus L atau P.");
         }
 
-        if (birthDate == null || birthDate.isAfter(LocalDate.now())) {
+        if (tanggalLahir == null || tanggalLahir.isAfter(LocalDate.now())) {
             throw new IllegalArgumentException("Tanggal lahir tidak valid.");
         }
 
-        if (birthPlace == null || birthPlace.isBlank()) {
+        if (tempatLahir == null || tempatLahir.isBlank()) {
             throw new IllegalArgumentException("Tempat lahir wajib diisi.");
         }
 
-        if (address == null || address.isBlank()) {
+        if (alamat == null || alamat.isBlank()) {
             throw new IllegalArgumentException("Alamat wajib diisi.");
         }
     }

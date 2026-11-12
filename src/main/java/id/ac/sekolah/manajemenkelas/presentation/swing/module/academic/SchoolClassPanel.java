@@ -131,7 +131,8 @@ public class SchoolClassPanel extends JPanel implements ScreenPage {
                     Map<Long, Integer> occ = new HashMap<>();
                     for (StudentPlacement p : container.getAcademicService().getAllStudentPlacements()) {
                         if (p.isActive()) {
-                            occ.merge(p.getClassId(), 1, Integer::sum);
+                            Integer jumlahSaatIni = occ.get(p.getClassId());
+                            occ.put(p.getClassId(), jumlahSaatIni == null ? 1 : jumlahSaatIni + 1);
                         }
                     }
                     return new Object[]{yList, cList, occ};
@@ -207,14 +208,24 @@ public class SchoolClassPanel extends JPanel implements ScreenPage {
 
     private void updateButtons() {
         SchoolClass s = getSelectedClass();
-        boolean hasActiveYear = years.stream().anyMatch(AcademicYear::isActive);
+        boolean hasActiveYear = !ambilTahunAjaranAktif().isEmpty();
         addButton.setEnabled(hasActiveYear);
         editButton.setEnabled(s != null);
         deactivateButton.setEnabled(s != null && s.isActive());
     }
 
+    private List<AcademicYear> ambilTahunAjaranAktif() {
+        List<AcademicYear> daftarAktif = new ArrayList<>();
+        for (AcademicYear tahun : years) {
+            if (tahun.isActive()) {
+                daftarAktif.add(tahun);
+            }
+        }
+        return daftarAktif;
+    }
+
     private void onAdd() {
-        List<AcademicYear> activeYears = years.stream().filter(AcademicYear::isActive).toList();
+        List<AcademicYear> activeYears = ambilTahunAjaranAktif();
         if (activeYears.isEmpty()) {
             feedbackBanner.showWarning("Diperlukan minimal satu Tahun Ajaran aktif untuk membuat kelas.");
             return;
@@ -232,7 +243,7 @@ public class SchoolClassPanel extends JPanel implements ScreenPage {
         if (selected == null) {
             return;
         }
-        List<AcademicYear> activeYears = years.stream().filter(AcademicYear::isActive).toList();
+        List<AcademicYear> activeYears = ambilTahunAjaranAktif();
         if (activeYears.isEmpty()) {
             feedbackBanner.showWarning("Tahun ajaran untuk kelas harus berstatus aktif agar dapat diperbarui.");
             return;

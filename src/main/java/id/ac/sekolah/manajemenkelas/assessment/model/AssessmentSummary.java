@@ -4,71 +4,70 @@ import java.math.BigDecimal;
 
 public class AssessmentSummary {
 
-    private final Long assessmentId;
-    private final String title;
-    private final String assessmentType;
-    private final BigDecimal maxScore;
-    private final int totalStudentsScored;
-    private final BigDecimal averageScore;
-    private final BigDecimal highestScore;
-    private final BigDecimal lowestScore;
-    private final BigDecimal averagePercentage;
+    private final Long idPenilaian;
+    private final String judul;
+    private final String jenisPenilaian;
+    private final BigDecimal nilaiMaksimal;
+    private final int totalSiswaDinilai;
+    private final BigDecimal rataRataNilai;
+    private final BigDecimal nilaiTertinggi;
+    private final BigDecimal nilaiTerendah;
+    private final BigDecimal rataRataPersentase;
 
     public AssessmentSummary(
-            Long assessmentId,
-            String title,
-            String assessmentType,
-            BigDecimal maxScore,
-            int totalStudentsScored,
-            BigDecimal averageScore,
-            BigDecimal highestScore,
-            BigDecimal lowestScore,
-            BigDecimal averagePercentage) {
-        this.assessmentId = assessmentId;
-        this.title = title;
-        this.assessmentType = assessmentType;
-        this.maxScore = maxScore;
-        this.totalStudentsScored = totalStudentsScored;
-        this.averageScore = averageScore;
-        this.highestScore = highestScore;
-        this.lowestScore = lowestScore;
-        this.averagePercentage = averagePercentage;
+            Long idPenilaian,
+            String judul,
+            String jenisPenilaian,
+            BigDecimal nilaiMaksimal,
+            int totalSiswaDinilai,
+            BigDecimal rataRataNilai,
+            BigDecimal nilaiTertinggi,
+            BigDecimal nilaiTerendah,
+            BigDecimal rataRataPersentase) {
+        this.idPenilaian = idPenilaian;
+        this.judul = judul;
+        this.jenisPenilaian = jenisPenilaian;
+        this.nilaiMaksimal = nilaiMaksimal;
+        this.totalSiswaDinilai = totalSiswaDinilai;
+        this.rataRataNilai = rataRataNilai;
+        this.nilaiTertinggi = nilaiTertinggi;
+        this.nilaiTerendah = nilaiTerendah;
+        this.rataRataPersentase = rataRataPersentase;
     }
 
     public Long getAssessmentId() {
-        return assessmentId;
+        return idPenilaian;
     }
 
     public String getTitle() {
-        return title;
+        return judul;
     }
 
     public String getAssessmentType() {
-        return assessmentType;
+        return jenisPenilaian;
     }
 
     public BigDecimal getMaxScore() {
-        return maxScore;
+        return nilaiMaksimal;
     }
 
     public int getTotalStudentsScored() {
-        return totalStudentsScored;
+        return totalSiswaDinilai;
     }
 
     public BigDecimal getAverageScore() {
-        return averageScore;
+        return rataRataNilai;
     }
 
     public BigDecimal getHighestScore() {
-        return highestScore;
+        return nilaiTertinggi;
     }
 
     public BigDecimal getLowestScore() {
-        return lowestScore;
+        return nilaiTerendah;
     }
 
     public BigDecimal getAveragePercentage() {
-        return averagePercentage;
+        return rataRataPersentase;
     }
 }
-

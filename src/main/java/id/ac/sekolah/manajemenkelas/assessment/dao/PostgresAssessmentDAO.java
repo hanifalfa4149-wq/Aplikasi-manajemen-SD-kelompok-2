@@ -92,15 +92,15 @@ public class PostgresAssessmentDAO implements AssessmentDAO {
 
     @Override
     public List<Assessment> findAllAssessments() {
-        List<Assessment> list = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_FIND_ALL_ASSESSMENTS);
-             ResultSet rs = ps.executeQuery()) {
+        List<Assessment> daftarPenilaian = new ArrayList<>();
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(SQL_FIND_ALL_ASSESSMENTS);
+             ResultSet hasilQuery = pernyataan.executeQuery()) {
 
-            while (rs.next()) {
-                list.add(mapAssessment(rs));
+            while (hasilQuery.next()) {
+                daftarPenilaian.add(petakanPenilaian(hasilQuery));
             }
-            return list;
+            return daftarPenilaian;
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil daftar penilaian.", e);
         }
@@ -111,12 +111,15 @@ public class PostgresAssessmentDAO implements AssessmentDAO {
         if (id == null) {
             return Optional.empty();
         }
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_FIND_ASSESSMENT_BY_ID)) {
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(SQL_FIND_ASSESSMENT_BY_ID)) {
 
-            ps.setLong(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? Optional.of(mapAssessment(rs)) : Optional.empty();
+            pernyataan.setLong(1, id);
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                if (hasilQuery.next()) {
+                    return Optional.of(petakanPenilaian(hasilQuery));
+                }
+                return Optional.empty();
             }
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mencari data penilaian berdasarkan ID.", e);
@@ -124,73 +127,73 @@ public class PostgresAssessmentDAO implements AssessmentDAO {
     }
 
     @Override
-    public List<Assessment> findAssessmentsByTeachingAssignmentId(Long teachingAssignmentId) {
-        if (teachingAssignmentId == null) {
+    public List<Assessment> findAssessmentsByTeachingAssignmentId(Long idPenugasanMengajar) {
+        if (idPenugasanMengajar == null) {
             return List.of();
         }
-        List<Assessment> list = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_FIND_ASSESSMENTS_BY_TEACHING)) {
+        List<Assessment> daftarPenilaian = new ArrayList<>();
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(SQL_FIND_ASSESSMENTS_BY_TEACHING)) {
 
-            ps.setLong(1, teachingAssignmentId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(mapAssessment(rs));
+            pernyataan.setLong(1, idPenugasanMengajar);
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                while (hasilQuery.next()) {
+                    daftarPenilaian.add(petakanPenilaian(hasilQuery));
                 }
             }
-            return list;
+            return daftarPenilaian;
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mengambil penilaian berdasarkan penugasan mengajar.", e);
         }
     }
 
     @Override
-    public void saveAssessment(Assessment assessment) {
-        if (assessment == null) {
+    public void saveAssessment(Assessment penilaian) {
+        if (penilaian == null) {
             throw new IllegalArgumentException("Data penilaian tidak boleh null.");
         }
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_INSERT_ASSESSMENT)) {
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(SQL_INSERT_ASSESSMENT)) {
 
-            ps.setLong(1, assessment.getTeachingAssignmentId());
-            ps.setString(2, assessment.getTitle().trim());
-            ps.setString(3, assessment.getAssessmentType().trim().toUpperCase());
-            ps.setDate(4, Date.valueOf(assessment.getAssessmentDate()));
-            ps.setBigDecimal(5, assessment.getMaxScore());
-            JdbcUtils.setNullableString(ps, 6, assessment.getDescription());
+            pernyataan.setLong(1, penilaian.getTeachingAssignmentId());
+            pernyataan.setString(2, penilaian.getTitle().trim());
+            pernyataan.setString(3, penilaian.getAssessmentType().trim().toUpperCase());
+            pernyataan.setDate(4, Date.valueOf(penilaian.getAssessmentDate()));
+            pernyataan.setBigDecimal(5, penilaian.getMaxScore());
+            JdbcUtils.setNullableString(pernyataan, 6, penilaian.getDescription());
 
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    assessment.setId(rs.getLong("id"));
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                if (hasilQuery.next()) {
+                    penilaian.setId(hasilQuery.getLong("id"));
                 }
             }
         } catch (SQLException e) {
-            throw translateSqlException("Gagal menyimpan data penilaian.", e);
+            throw terjemahkanEksepsiSql("Gagal menyimpan data penilaian.", e);
         }
     }
 
     @Override
-    public void updateAssessment(Assessment assessment) {
-        if (assessment == null || assessment.getId() == null) {
+    public void updateAssessment(Assessment penilaian) {
+        if (penilaian == null || penilaian.getId() == null) {
             throw new IllegalArgumentException("ID penilaian wajib diisi untuk pembaruan.");
         }
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_UPDATE_ASSESSMENT)) {
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(SQL_UPDATE_ASSESSMENT)) {
 
-            ps.setLong(1, assessment.getTeachingAssignmentId());
-            ps.setString(2, assessment.getTitle().trim());
-            ps.setString(3, assessment.getAssessmentType().trim().toUpperCase());
-            ps.setDate(4, Date.valueOf(assessment.getAssessmentDate()));
-            ps.setBigDecimal(5, assessment.getMaxScore());
-            JdbcUtils.setNullableString(ps, 6, assessment.getDescription());
-            ps.setLong(7, assessment.getId());
+            pernyataan.setLong(1, penilaian.getTeachingAssignmentId());
+            pernyataan.setString(2, penilaian.getTitle().trim());
+            pernyataan.setString(3, penilaian.getAssessmentType().trim().toUpperCase());
+            pernyataan.setDate(4, Date.valueOf(penilaian.getAssessmentDate()));
+            pernyataan.setBigDecimal(5, penilaian.getMaxScore());
+            JdbcUtils.setNullableString(pernyataan, 6, penilaian.getDescription());
+            pernyataan.setLong(7, penilaian.getId());
 
-            int affected = ps.executeUpdate();
-            if (affected == 0) {
+            int barisTerpengaruh = pernyataan.executeUpdate();
+            if (barisTerpengaruh == 0) {
                 throw new IllegalArgumentException("Data penilaian tidak ditemukan.");
             }
         } catch (SQLException e) {
-            throw translateSqlException("Gagal memperbarui data penilaian.", e);
+            throw terjemahkanEksepsiSql("Gagal memperbarui data penilaian.", e);
         }
     }
 
@@ -199,12 +202,15 @@ public class PostgresAssessmentDAO implements AssessmentDAO {
         if (id == null) {
             return Optional.empty();
         }
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_FIND_SCORE_BY_ID)) {
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(SQL_FIND_SCORE_BY_ID)) {
 
-            ps.setLong(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? Optional.of(mapScore(rs)) : Optional.empty();
+            pernyataan.setLong(1, id);
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                if (hasilQuery.next()) {
+                    return Optional.of(petakanNilaiSiswa(hasilQuery));
+                }
+                return Optional.empty();
             }
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mencari nilai siswa berdasarkan ID.", e);
@@ -212,17 +218,20 @@ public class PostgresAssessmentDAO implements AssessmentDAO {
     }
 
     @Override
-    public Optional<StudentScore> findScoreByAssessmentAndStudent(Long assessmentId, Long studentId) {
-        if (assessmentId == null || studentId == null) {
+    public Optional<StudentScore> findScoreByAssessmentAndStudent(Long idPenilaian, Long idSiswa) {
+        if (idPenilaian == null || idSiswa == null) {
             return Optional.empty();
         }
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_FIND_SCORE_BY_ASSESSMENT_AND_STUDENT)) {
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(SQL_FIND_SCORE_BY_ASSESSMENT_AND_STUDENT)) {
 
-            ps.setLong(1, assessmentId);
-            ps.setLong(2, studentId);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? Optional.of(mapScore(rs)) : Optional.empty();
+            pernyataan.setLong(1, idPenilaian);
+            pernyataan.setLong(2, idSiswa);
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                if (hasilQuery.next()) {
+                    return Optional.of(petakanNilaiSiswa(hasilQuery));
+                }
+                return Optional.empty();
             }
         } catch (SQLException e) {
             throw new IllegalStateException("Gagal mencari nilai siswa pada penilaian.", e);
@@ -230,161 +239,171 @@ public class PostgresAssessmentDAO implements AssessmentDAO {
     }
 
     @Override
-    public List<StudentScore> findScoresByAssessmentId(Long assessmentId) {
-        if (assessmentId == null) {
+    public List<StudentScore> findScoresByAssessmentId(Long idPenilaian) {
+        if (idPenilaian == null) {
             return List.of();
         }
-        return queryScoresByLong(
+        return cariDaftarNilaiBerdasarkanLong(
                 SQL_FIND_SCORES_BY_ASSESSMENT,
-                assessmentId,
+                idPenilaian,
                 "Gagal mengambil daftar nilai berdasarkan penilaian.");
     }
 
     @Override
-    public List<StudentScore> findScoresByStudentId(Long studentId) {
-        if (studentId == null) {
+    public List<StudentScore> findScoresByStudentId(Long idSiswa) {
+        if (idSiswa == null) {
             return List.of();
         }
-        return queryScoresByLong(
+        return cariDaftarNilaiBerdasarkanLong(
                 SQL_FIND_SCORES_BY_STUDENT,
-                studentId,
+                idSiswa,
                 "Gagal mengambil daftar nilai berdasarkan siswa.");
     }
 
     @Override
-    public void saveScore(StudentScore score) {
-        if (score == null) {
+    public void saveScore(StudentScore nilaiSiswa) {
+        if (nilaiSiswa == null) {
             throw new IllegalArgumentException("Data nilai siswa tidak boleh null.");
         }
-        try (Connection conn = DatabaseConfig.getConnection()) {
-            insertSingleScore(conn, score);
+        try (Connection koneksi = DatabaseConfig.getConnection()) {
+            sisipkanSatuNilaiSiswa(koneksi, nilaiSiswa);
         } catch (SQLException e) {
-            throw translateSqlException("Gagal menyimpan nilai siswa.", e);
+            throw terjemahkanEksepsiSql("Gagal menyimpan nilai siswa.", e);
         }
     }
 
     @Override
-    public void saveAllScores(List<StudentScore> scores) {
-        if (scores == null || scores.isEmpty()) {
+    public void saveAllScores(List<StudentScore> daftarNilaiSiswa) {
+        if (daftarNilaiSiswa == null || daftarNilaiSiswa.isEmpty()) {
             return;
         }
-        JdbcUtils.inTransactionVoid(conn -> {
+        try (Connection koneksi = DatabaseConfig.getConnection()) {
+            boolean statusAutoCommitAwal = koneksi.getAutoCommit();
+            koneksi.setAutoCommit(false);
             try {
-                for (StudentScore score : scores) {
-                    insertSingleScore(conn, score);
+                for (StudentScore nilaiSiswa : daftarNilaiSiswa) {
+                    sisipkanSatuNilaiSiswa(koneksi, nilaiSiswa);
                 }
+                koneksi.commit();
             } catch (SQLException e) {
-                throw translateSqlException("Gagal menyimpan nilai siswa secara massal.", e);
+                JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+                throw terjemahkanEksepsiSql("Gagal menyimpan nilai siswa secara massal.", e);
+            } catch (RuntimeException e) {
+                JdbcUtils.lakukanRollbackDenganAman(koneksi, e);
+                throw e;
+            } finally {
+                JdbcUtils.pulihkanAutoCommitDenganAman(koneksi, statusAutoCommitAwal);
             }
-        });
+        } catch (SQLException e) {
+            throw new IllegalStateException("Gagal mengelola transaksi database.", e);
+        }
     }
 
     @Override
-    public void updateScore(StudentScore score) {
-        if (score == null || score.getId() == null) {
+    public void updateScore(StudentScore nilaiSiswa) {
+        if (nilaiSiswa == null || nilaiSiswa.getId() == null) {
             throw new IllegalArgumentException("ID nilai siswa wajib diisi untuk pembaruan.");
         }
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(SQL_UPDATE_SCORE)) {
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(SQL_UPDATE_SCORE)) {
 
-            ps.setLong(1, score.getAssessmentId());
-            ps.setLong(2, score.getStudentId());
-            ps.setBigDecimal(3, score.getScore());
-            JdbcUtils.setNullableString(ps, 4, score.getNotes());
-            if (score.getRecordedBy() != null) {
-                ps.setLong(5, score.getRecordedBy());
+            pernyataan.setLong(1, nilaiSiswa.getAssessmentId());
+            pernyataan.setLong(2, nilaiSiswa.getStudentId());
+            pernyataan.setBigDecimal(3, nilaiSiswa.getScore());
+            JdbcUtils.setNullableString(pernyataan, 4, nilaiSiswa.getNotes());
+            if (nilaiSiswa.getRecordedBy() != null) {
+                pernyataan.setLong(5, nilaiSiswa.getRecordedBy());
             } else {
-                ps.setNull(5, Types.BIGINT);
+                pernyataan.setNull(5, Types.BIGINT);
             }
-            ps.setLong(6, score.getId());
+            pernyataan.setLong(6, nilaiSiswa.getId());
 
-            int affected = ps.executeUpdate();
-            if (affected == 0) {
+            int barisTerpengaruh = pernyataan.executeUpdate();
+            if (barisTerpengaruh == 0) {
                 throw new IllegalArgumentException("Data nilai siswa tidak ditemukan.");
             }
         } catch (SQLException e) {
-            throw translateSqlException("Gagal memperbarui nilai siswa.", e);
+            throw terjemahkanEksepsiSql("Gagal memperbarui nilai siswa.", e);
         }
     }
 
-    private void insertSingleScore(Connection conn, StudentScore score) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement(SQL_INSERT_SCORE)) {
-            ps.setLong(1, score.getAssessmentId());
-            ps.setLong(2, score.getStudentId());
-            ps.setBigDecimal(3, score.getScore());
-            JdbcUtils.setNullableString(ps, 4, score.getNotes());
-            if (score.getRecordedBy() != null) {
-                ps.setLong(5, score.getRecordedBy());
+    private void sisipkanSatuNilaiSiswa(Connection koneksi, StudentScore nilaiSiswa) throws SQLException {
+        try (PreparedStatement pernyataan = koneksi.prepareStatement(SQL_INSERT_SCORE)) {
+            pernyataan.setLong(1, nilaiSiswa.getAssessmentId());
+            pernyataan.setLong(2, nilaiSiswa.getStudentId());
+            pernyataan.setBigDecimal(3, nilaiSiswa.getScore());
+            JdbcUtils.setNullableString(pernyataan, 4, nilaiSiswa.getNotes());
+            if (nilaiSiswa.getRecordedBy() != null) {
+                pernyataan.setLong(5, nilaiSiswa.getRecordedBy());
             } else {
-                ps.setNull(5, Types.BIGINT);
+                pernyataan.setNull(5, Types.BIGINT);
             }
 
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    score.setId(rs.getLong("id"));
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                if (hasilQuery.next()) {
+                    nilaiSiswa.setId(hasilQuery.getLong("id"));
                 }
             }
         }
     }
 
-    private List<StudentScore> queryScoresByLong(String sql, Long idParam, String errorMessage) {
-        List<StudentScore> list = new ArrayList<>();
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+    private List<StudentScore> cariDaftarNilaiBerdasarkanLong(String sql, Long parameterId, String pesanGalat) {
+        List<StudentScore> daftarNilai = new ArrayList<>();
+        try (Connection koneksi = DatabaseConfig.getConnection();
+             PreparedStatement pernyataan = koneksi.prepareStatement(sql)) {
 
-            ps.setLong(1, idParam);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    list.add(mapScore(rs));
+            pernyataan.setLong(1, parameterId);
+            try (ResultSet hasilQuery = pernyataan.executeQuery()) {
+                while (hasilQuery.next()) {
+                    daftarNilai.add(petakanNilaiSiswa(hasilQuery));
                 }
             }
-            return list;
+            return daftarNilai;
         } catch (SQLException e) {
-            throw new IllegalStateException(errorMessage, e);
+            throw new IllegalStateException(pesanGalat, e);
         }
     }
 
-    private Assessment mapAssessment(ResultSet rs) throws SQLException {
-        Date sqlDate = rs.getDate("tanggal_penilaian");
+    private Assessment petakanPenilaian(ResultSet hasilQuery) throws SQLException {
+        Date tanggalSql = hasilQuery.getDate("tanggal_penilaian");
         return new Assessment(
-                rs.getLong("id"),
-                rs.getLong("id_penugasan_mengajar"),
-                rs.getString("judul"),
-                rs.getString("jenis_penilaian"),
-                sqlDate != null ? sqlDate.toLocalDate() : null,
-                rs.getBigDecimal("nilai_maksimal"),
-                JdbcUtils.emptyIfNull(rs.getString("deskripsi")));
+                hasilQuery.getLong("id"),
+                hasilQuery.getLong("id_penugasan_mengajar"),
+                hasilQuery.getString("judul"),
+                hasilQuery.getString("jenis_penilaian"),
+                tanggalSql != null ? tanggalSql.toLocalDate() : null,
+                hasilQuery.getBigDecimal("nilai_maksimal"),
+                JdbcUtils.emptyIfNull(hasilQuery.getString("deskripsi")));
     }
 
-    private StudentScore mapScore(ResultSet rs) throws SQLException {
-        long recordedByRaw = rs.getLong("dicatat_oleh");
-        Long recordedBy = rs.wasNull() ? null : recordedByRaw;
+    private StudentScore petakanNilaiSiswa(ResultSet hasilQuery) throws SQLException {
+        long dicatatOlehMentah = hasilQuery.getLong("dicatat_oleh");
+        Long dicatatOleh = hasilQuery.wasNull() ? null : dicatatOlehMentah;
         return new StudentScore(
-                rs.getLong("id"),
-                rs.getLong("id_penilaian"),
-                rs.getLong("id_siswa"),
-                rs.getBigDecimal("nilai"),
-                JdbcUtils.emptyIfNull(rs.getString("keterangan")),
-                recordedBy);
+                hasilQuery.getLong("id"),
+                hasilQuery.getLong("id_penilaian"),
+                hasilQuery.getLong("id_siswa"),
+                hasilQuery.getBigDecimal("nilai"),
+                JdbcUtils.emptyIfNull(hasilQuery.getString("keterangan")),
+                dicatatOleh);
     }
 
-    private RuntimeException translateSqlException(String message, SQLException e) {
-        String sqlState = e.getSQLState();
-        if ("23505".equals(sqlState)) {
+    private RuntimeException terjemahkanEksepsiSql(String pesan, SQLException e) {
+        String kodeSqlState = e.getSQLState();
+        if ("23505".equals(kodeSqlState)) {
             return new IllegalArgumentException("Nilai siswa untuk penilaian ini sudah tercatat.", e);
         }
-        if ("23503".equals(sqlState)) {
+        if ("23503".equals(kodeSqlState)) {
             return new IllegalArgumentException(
                     "Referensi penugasan mengajar, penilaian, siswa, atau pengguna tidak valid.", e);
         }
-        if ("23514".equals(sqlState)) {
+        if ("23514".equals(kodeSqlState)) {
             return new IllegalArgumentException(
                     "Data penilaian atau nilai melanggar batasan nilai/jenis yang diizinkan.", e);
         }
-        if ("22003".equals(sqlState)) {
+        if ("22003".equals(kodeSqlState)) {
             return new IllegalArgumentException("Nilai angka melebihi kapasitas kolom NUMERIC(7,2).", e);
         }
-        return new IllegalStateException(message, e);
+        return new IllegalStateException(pesan, e);
     }
 }
-

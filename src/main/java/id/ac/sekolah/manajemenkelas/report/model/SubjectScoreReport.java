@@ -4,61 +4,60 @@ import java.math.BigDecimal;
 
 public class SubjectScoreReport {
 
-    private final Long subjectId;
-    private final String subjectCode;
-    private final String subjectName;
-    private final int assessmentCount;
-    private final int scoredEntriesCount;
-    private final BigDecimal averageScore;
-    private final BigDecimal averagePercentage;
+    private final Long idMataPelajaran;
+    private final String kodeMataPelajaran;
+    private final String namaMataPelajaran;
+    private final int jumlahPenilaian;
+    private final int jumlahEntriDinilai;
+    private final BigDecimal rataRataNilai;
+    private final BigDecimal rataRataPersentase;
 
     public SubjectScoreReport(
-            Long subjectId,
-            String subjectCode,
-            String subjectName,
-            int assessmentCount,
-            int scoredEntriesCount,
-            BigDecimal averageScore,
-            BigDecimal averagePercentage) {
-        this.subjectId = subjectId;
-        this.subjectCode = subjectCode;
-        this.subjectName = subjectName;
-        this.assessmentCount = assessmentCount;
-        this.scoredEntriesCount = scoredEntriesCount;
-        this.averageScore = averageScore;
-        this.averagePercentage = averagePercentage;
+            Long idMataPelajaran,
+            String kodeMataPelajaran,
+            String namaMataPelajaran,
+            int jumlahPenilaian,
+            int jumlahEntriDinilai,
+            BigDecimal rataRataNilai,
+            BigDecimal rataRataPersentase) {
+        this.idMataPelajaran = idMataPelajaran;
+        this.kodeMataPelajaran = kodeMataPelajaran;
+        this.namaMataPelajaran = namaMataPelajaran;
+        this.jumlahPenilaian = jumlahPenilaian;
+        this.jumlahEntriDinilai = jumlahEntriDinilai;
+        this.rataRataNilai = rataRataNilai;
+        this.rataRataPersentase = rataRataPersentase;
     }
 
     public Long getSubjectId() {
-        return subjectId;
+        return idMataPelajaran;
     }
 
     public String getSubjectCode() {
-        return subjectCode;
+        return kodeMataPelajaran;
     }
 
     public String getSubjectName() {
-        return subjectName;
+        return namaMataPelajaran;
     }
 
     public int getAssessmentCount() {
-        return assessmentCount;
+        return jumlahPenilaian;
     }
 
     public int getScoredEntriesCount() {
-        return scoredEntriesCount;
+        return jumlahEntriDinilai;
     }
 
     public BigDecimal getAverageScore() {
-        return averageScore;
+        return rataRataNilai;
     }
 
     public BigDecimal getAveragePercentage() {
-        return averagePercentage;
+        return rataRataPersentase;
     }
 
     public boolean hasScores() {
-        return scoredEntriesCount > 0 && averageScore != null;
+        return jumlahEntriDinilai > 0 && rataRataNilai != null;
     }
 }
-

@@ -4,75 +4,74 @@ import java.math.BigDecimal;
 
 public class ClassAttendanceReport {
 
-    private final Long classId;
-    private final String className;
-    private final int gradeLevel;
-    private final int totalRecords;
-    private final int hadirCount;
-    private final int sakitCount;
-    private final int izinCount;
-    private final int alpaCount;
-    private final BigDecimal attendancePercentage;
+    private final Long idKelas;
+    private final String namaKelas;
+    private final int tingkatKelas;
+    private final int totalCatatan;
+    private final int jumlahHadir;
+    private final int jumlahSakit;
+    private final int jumlahIzin;
+    private final int jumlahAlpa;
+    private final BigDecimal persentaseKehadiran;
 
     public ClassAttendanceReport(
-            Long classId,
-            String className,
-            int gradeLevel,
-            int totalRecords,
-            int hadirCount,
-            int sakitCount,
-            int izinCount,
-            int alpaCount,
-            BigDecimal attendancePercentage) {
-        this.classId = classId;
-        this.className = className;
-        this.gradeLevel = gradeLevel;
-        this.totalRecords = totalRecords;
-        this.hadirCount = hadirCount;
-        this.sakitCount = sakitCount;
-        this.izinCount = izinCount;
-        this.alpaCount = alpaCount;
-        this.attendancePercentage = attendancePercentage;
+            Long idKelas,
+            String namaKelas,
+            int tingkatKelas,
+            int totalCatatan,
+            int jumlahHadir,
+            int jumlahSakit,
+            int jumlahIzin,
+            int jumlahAlpa,
+            BigDecimal persentaseKehadiran) {
+        this.idKelas = idKelas;
+        this.namaKelas = namaKelas;
+        this.tingkatKelas = tingkatKelas;
+        this.totalCatatan = totalCatatan;
+        this.jumlahHadir = jumlahHadir;
+        this.jumlahSakit = jumlahSakit;
+        this.jumlahIzin = jumlahIzin;
+        this.jumlahAlpa = jumlahAlpa;
+        this.persentaseKehadiran = persentaseKehadiran;
     }
 
     public Long getClassId() {
-        return classId;
+        return idKelas;
     }
 
     public String getClassName() {
-        return className;
+        return namaKelas;
     }
 
     public int getGradeLevel() {
-        return gradeLevel;
+        return tingkatKelas;
     }
 
     public int getTotalRecords() {
-        return totalRecords;
+        return totalCatatan;
     }
 
     public int getHadirCount() {
-        return hadirCount;
+        return jumlahHadir;
     }
 
     public int getSakitCount() {
-        return sakitCount;
+        return jumlahSakit;
     }
 
     public int getIzinCount() {
-        return izinCount;
+        return jumlahIzin;
     }
 
     public int getAlpaCount() {
-        return alpaCount;
+        return jumlahAlpa;
     }
 
     public BigDecimal getAttendancePercentage() {
-        return attendancePercentage;
+        return persentaseKehadiran;
     }
 
     public boolean hasSufficientData() {
-        return totalRecords > 0 && attendancePercentage != null;
+        return totalCatatan > 0 && persentaseKehadiran != null;
     }
 }
-

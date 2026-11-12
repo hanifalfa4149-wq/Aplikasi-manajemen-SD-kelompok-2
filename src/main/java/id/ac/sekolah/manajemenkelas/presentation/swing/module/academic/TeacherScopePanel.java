@@ -97,12 +97,20 @@ public class TeacherScopePanel extends JPanel implements ScreenPage {
 
         AsyncTaskRunner.run(
                 () -> {
-                    List<HomeroomAssignment> homerooms = container.getAcademicService().getAllHomeroomAssignments().stream()
-                            .filter(h -> h.isActive() && teacherId.equals(h.getTeacherId()))
-                            .toList();
-                    List<TeachingAssignment> teachings = container.getAcademicService().getTeachingAssignmentsByTeacher(teacherId).stream()
-                            .filter(TeachingAssignment::isActive)
-                            .toList();
+                    List<HomeroomAssignment> homerooms = new java.util.ArrayList<>();
+                    for (HomeroomAssignment h : container.getAcademicService().getAllHomeroomAssignments()) {
+                        if (h.isActive() && teacherId.equals(h.getTeacherId())) {
+                            homerooms.add(h);
+                        }
+                    }
+
+                    List<TeachingAssignment> teachings = new java.util.ArrayList<>();
+                    for (TeachingAssignment t : container.getAcademicService().getTeachingAssignmentsByTeacher(teacherId)) {
+                        if (t.isActive()) {
+                            teachings.add(t);
+                        }
+                    }
+
                     Map<Long, SchoolClass> classMap = new HashMap<>();
                     for (SchoolClass c : container.getAcademicService().getAllClasses()) {
                         classMap.put(c.getId(), c);
@@ -120,8 +128,12 @@ public class TeacherScopePanel extends JPanel implements ScreenPage {
                         studentMap.put(s.getId(), s);
                     }
                     Set<Long> classIds = new LinkedHashSet<>();
-                    homerooms.forEach(h -> classIds.add(h.getClassId()));
-                    teachings.forEach(t -> classIds.add(t.getClassId()));
+                    for (HomeroomAssignment h : homerooms) {
+                        classIds.add(h.getClassId());
+                    }
+                    for (TeachingAssignment t : teachings) {
+                        classIds.add(t.getClassId());
+                    }
 
                     List<Object[]> studentRows = new java.util.ArrayList<>();
                     for (Long classId : classIds) {

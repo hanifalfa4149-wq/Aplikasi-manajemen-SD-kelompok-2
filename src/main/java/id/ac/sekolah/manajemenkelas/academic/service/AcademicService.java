@@ -1,6 +1,7 @@
 package id.ac.sekolah.manajemenkelas.academic.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -102,9 +103,11 @@ public class AcademicService {
 
         requireAdminIfAuthenticated();
 
-        AcademicYear existing = academicDAO.findAcademicYearById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Tahun ajaran tidak ditemukan."));
+        Optional<AcademicYear> hasilCari = academicDAO.findAcademicYearById(id);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Tahun ajaran tidak ditemukan.");
+        }
+        AcademicYear existing = hasilCari.get();
 
         validateAcademicYear(name, startDate, endDate);
 
@@ -128,9 +131,11 @@ public class AcademicService {
     public void deactivateAcademicYear(Long id) {
         requireAdminIfAuthenticated();
 
-        AcademicYear academicYear = academicDAO.findAcademicYearById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Tahun ajaran tidak ditemukan."));
+        Optional<AcademicYear> hasilCari = academicDAO.findAcademicYearById(id);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Tahun ajaran tidak ditemukan.");
+        }
+        AcademicYear academicYear = hasilCari.get();
 
         academicYear.setActive(false);
         academicDAO.updateAcademicYear(academicYear);
@@ -139,9 +144,11 @@ public class AcademicService {
     public void activateAcademicYear(Long id) {
         requireAdminIfAuthenticated();
 
-        AcademicYear academicYear = academicDAO.findAcademicYearById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Tahun ajaran tidak ditemukan."));
+        Optional<AcademicYear> hasilCari = academicDAO.findAcademicYearById(id);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Tahun ajaran tidak ditemukan.");
+        }
+        AcademicYear academicYear = hasilCari.get();
 
         academicYear.setActive(true);
         academicDAO.updateAcademicYear(academicYear);
@@ -177,16 +184,23 @@ public class AcademicService {
 
         requireAdminIfAuthenticated();
 
-        AcademicYear academicYear = academicDAO.findAcademicYearById(academicYearId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Tahun ajaran tidak ditemukan."));
+        Optional<AcademicYear> hasilTahun = academicDAO.findAcademicYearById(academicYearId);
+        if (hasilTahun.isEmpty()) {
+            throw new IllegalArgumentException("Tahun ajaran tidak ditemukan.");
+        }
+        AcademicYear academicYear = hasilTahun.get();
 
         validateSemester(academicYear, semesterNumber, name, startDate, endDate);
 
-        boolean duplicate = academicDAO.findSemestersByAcademicYearId(academicYearId).stream()
-                .anyMatch(s -> s.getSemesterNumber() == semesterNumber);
+        boolean adaDuplikat = false;
+        for (Semester item : academicDAO.findSemestersByAcademicYearId(academicYearId)) {
+            if (item.getSemesterNumber() == semesterNumber) {
+                adaDuplikat = true;
+                break;
+            }
+        }
 
-        if (duplicate) {
+        if (adaDuplikat) {
             throw new IllegalArgumentException(
                     "Semester " + semesterNumber + " sudah terdaftar pada tahun ajaran ini.");
         }
@@ -226,18 +240,29 @@ public class AcademicService {
 
         requireAdminIfAuthenticated();
 
-        Semester existing = academicDAO.findSemesterById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Semester tidak ditemukan."));
+        Optional<Semester> hasilSemester = academicDAO.findSemesterById(id);
+        if (hasilSemester.isEmpty()) {
+            throw new IllegalArgumentException("Semester tidak ditemukan.");
+        }
+        Semester existing = hasilSemester.get();
 
-        AcademicYear academicYear = academicDAO.findAcademicYearById(academicYearId)
-                .orElseThrow(() -> new IllegalArgumentException("Tahun ajaran tidak ditemukan."));
+        Optional<AcademicYear> hasilTahun = academicDAO.findAcademicYearById(academicYearId);
+        if (hasilTahun.isEmpty()) {
+            throw new IllegalArgumentException("Tahun ajaran tidak ditemukan.");
+        }
+        AcademicYear academicYear = hasilTahun.get();
 
         validateSemester(academicYear, semesterNumber, name, startDate, endDate);
 
-        boolean duplicate = academicDAO.findSemestersByAcademicYearId(academicYearId).stream()
-                .anyMatch(s -> !s.getId().equals(id) && s.getSemesterNumber() == semesterNumber);
+        boolean adaDuplikat = false;
+        for (Semester item : academicDAO.findSemestersByAcademicYearId(academicYearId)) {
+            if (!item.getId().equals(id) && item.getSemesterNumber() == semesterNumber) {
+                adaDuplikat = true;
+                break;
+            }
+        }
 
-        if (duplicate) {
+        if (adaDuplikat) {
             throw new IllegalArgumentException(
                     "Semester " + semesterNumber + " sudah terdaftar pada tahun ajaran ini.");
         }
@@ -255,8 +280,11 @@ public class AcademicService {
     public void deactivateSemester(Long id) {
         requireAdminIfAuthenticated();
 
-        Semester semester = academicDAO.findSemesterById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Semester tidak ditemukan."));
+        Optional<Semester> hasilCari = academicDAO.findSemesterById(id);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Semester tidak ditemukan.");
+        }
+        Semester semester = hasilCari.get();
 
         semester.setActive(false);
         academicDAO.updateSemester(semester);
@@ -265,8 +293,11 @@ public class AcademicService {
     public void activateSemester(Long id) {
         requireAdminIfAuthenticated();
 
-        Semester semester = academicDAO.findSemesterById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Semester tidak ditemukan."));
+        Optional<Semester> hasilCari = academicDAO.findSemesterById(id);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Semester tidak ditemukan.");
+        }
+        Semester semester = hasilCari.get();
 
         semester.setActive(true);
         academicDAO.updateSemester(semester);
@@ -312,9 +343,11 @@ public class AcademicService {
 
         requireAdminIfAuthenticated();
 
-        AcademicYear academicYear = academicDAO.findAcademicYearById(academicYearId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Tahun ajaran tidak ditemukan."));
+        Optional<AcademicYear> hasilTahun = academicDAO.findAcademicYearById(academicYearId);
+        if (hasilTahun.isEmpty()) {
+            throw new IllegalArgumentException("Tahun ajaran tidak ditemukan.");
+        }
+        AcademicYear academicYear = hasilTahun.get();
 
         if (!academicYear.isActive()) {
             throw new IllegalArgumentException(
@@ -323,11 +356,16 @@ public class AcademicService {
 
         validateClass(name, gradeLevel, capacity);
 
-        boolean duplicate = academicDAO.findAllClasses().stream()
-                .anyMatch(schoolClass -> schoolClass.getAcademicYearId().equals(academicYearId)
-                        && schoolClass.getName().equalsIgnoreCase(name.trim()));
+        boolean adaDuplikat = false;
+        for (SchoolClass kelas : academicDAO.findAllClasses()) {
+            if (kelas.getAcademicYearId().equals(academicYearId)
+                    && kelas.getName().equalsIgnoreCase(name.trim())) {
+                adaDuplikat = true;
+                break;
+            }
+        }
 
-        if (duplicate) {
+        if (adaDuplikat) {
             throw new IllegalArgumentException(
                     "Nama kelas sudah digunakan pada tahun ajaran tersebut.");
         }
@@ -354,10 +392,13 @@ public class AcademicService {
     }
 
     public List<SchoolClass> getClassesByAcademicYear(Long academicYearId) {
-
-        return academicDAO.findAllClasses().stream()
-                .filter(schoolClass -> schoolClass.getAcademicYearId().equals(academicYearId))
-                .toList();
+        List<SchoolClass> daftarKelas = new ArrayList<>();
+        for (SchoolClass kelas : academicDAO.findAllClasses()) {
+            if (kelas.getAcademicYearId().equals(academicYearId)) {
+                daftarKelas.add(kelas);
+            }
+        }
+        return daftarKelas;
     }
 
     public SchoolClass updateClass(
@@ -369,13 +410,17 @@ public class AcademicService {
 
         requireAdminIfAuthenticated();
 
-        SchoolClass existing = academicDAO.findClassById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Data kelas tidak ditemukan."));
+        Optional<SchoolClass> hasilKelas = academicDAO.findClassById(id);
+        if (hasilKelas.isEmpty()) {
+            throw new IllegalArgumentException("Data kelas tidak ditemukan.");
+        }
+        SchoolClass existing = hasilKelas.get();
 
-        AcademicYear academicYear = academicDAO.findAcademicYearById(academicYearId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Tahun ajaran tidak ditemukan."));
+        Optional<AcademicYear> hasilTahun = academicDAO.findAcademicYearById(academicYearId);
+        if (hasilTahun.isEmpty()) {
+            throw new IllegalArgumentException("Tahun ajaran tidak ditemukan.");
+        }
+        AcademicYear academicYear = hasilTahun.get();
 
         if (!academicYear.isActive()) {
             throw new IllegalArgumentException(
@@ -390,12 +435,17 @@ public class AcademicService {
                     "Kapasitas kelas (" + capacity + ") tidak boleh kurang dari jumlah siswa aktif (" + activeStudents + ").");
         }
 
-        boolean duplicate = academicDAO.findAllClasses().stream()
-                .anyMatch(schoolClass -> !schoolClass.getId().equals(id)
-                        && schoolClass.getAcademicYearId().equals(academicYearId)
-                        && schoolClass.getName().equalsIgnoreCase(name.trim()));
+        boolean adaDuplikat = false;
+        for (SchoolClass kelas : academicDAO.findAllClasses()) {
+            if (!kelas.getId().equals(id)
+                    && kelas.getAcademicYearId().equals(academicYearId)
+                    && kelas.getName().equalsIgnoreCase(name.trim())) {
+                adaDuplikat = true;
+                break;
+            }
+        }
 
-        if (duplicate) {
+        if (adaDuplikat) {
             throw new IllegalArgumentException(
                     "Nama kelas sudah digunakan pada tahun ajaran tersebut.");
         }
@@ -413,9 +463,11 @@ public class AcademicService {
     public void deactivateClass(Long id) {
         requireAdminIfAuthenticated();
 
-        SchoolClass schoolClass = academicDAO.findClassById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Data kelas tidak ditemukan."));
+        Optional<SchoolClass> hasilKelas = academicDAO.findClassById(id);
+        if (hasilKelas.isEmpty()) {
+            throw new IllegalArgumentException("Data kelas tidak ditemukan.");
+        }
+        SchoolClass schoolClass = hasilKelas.get();
 
         schoolClass.setActive(false);
         academicDAO.updateClass(schoolClass);
@@ -487,9 +539,11 @@ public class AcademicService {
 
         requireAdminIfAuthenticated();
 
-        Subject existing = academicDAO.findSubjectById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Mata pelajaran tidak ditemukan."));
+        Optional<Subject> hasilMapel = academicDAO.findSubjectById(id);
+        if (hasilMapel.isEmpty()) {
+            throw new IllegalArgumentException("Mata pelajaran tidak ditemukan.");
+        }
+        Subject existing = hasilMapel.get();
 
         validateSubject(code, name);
 
@@ -514,9 +568,11 @@ public class AcademicService {
     public void deactivateSubject(Long id) {
         requireAdminIfAuthenticated();
 
-        Subject subject = academicDAO.findSubjectById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Mata pelajaran tidak ditemukan."));
+        Optional<Subject> hasilMapel = academicDAO.findSubjectById(id);
+        if (hasilMapel.isEmpty()) {
+            throw new IllegalArgumentException("Mata pelajaran tidak ditemukan.");
+        }
+        Subject subject = hasilMapel.get();
 
         subject.setActive(false);
         academicDAO.updateSubject(subject);
@@ -546,8 +602,11 @@ public class AcademicService {
 
         requireAdminIfAuthenticated();
 
-        SchoolClass schoolClass = academicDAO.findClassById(classId)
-                .orElseThrow(() -> new IllegalArgumentException("Kelas tidak ditemukan."));
+        Optional<SchoolClass> hasilKelas = academicDAO.findClassById(classId);
+        if (hasilKelas.isEmpty()) {
+            throw new IllegalArgumentException("Kelas tidak ditemukan.");
+        }
+        SchoolClass schoolClass = hasilKelas.get();
         if (!schoolClass.isActive()) {
             throw new IllegalArgumentException("Kelas tidak aktif.");
         }
@@ -586,8 +645,11 @@ public class AcademicService {
     public HomeroomAssignment endHomeroomAssignment(Long assignmentId, LocalDate endDate) {
         requireAdminIfAuthenticated();
 
-        HomeroomAssignment assignment = academicDAO.findHomeroomAssignmentById(assignmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Penugasan wali kelas tidak ditemukan."));
+        Optional<HomeroomAssignment> hasilPenugasan = academicDAO.findHomeroomAssignmentById(assignmentId);
+        if (hasilPenugasan.isEmpty()) {
+            throw new IllegalArgumentException("Penugasan wali kelas tidak ditemukan.");
+        }
+        HomeroomAssignment assignment = hasilPenugasan.get();
 
         if (!assignment.isActive()) {
             throw new IllegalArgumentException("Penugasan wali kelas sudah tidak aktif.");
@@ -618,20 +680,29 @@ public class AcademicService {
 
         validateTeacherExistsAndActive(teacherId);
 
-        SchoolClass schoolClass = academicDAO.findClassById(classId)
-                .orElseThrow(() -> new IllegalArgumentException("Kelas tidak ditemukan."));
+        Optional<SchoolClass> hasilKelas = academicDAO.findClassById(classId);
+        if (hasilKelas.isEmpty()) {
+            throw new IllegalArgumentException("Kelas tidak ditemukan.");
+        }
+        SchoolClass schoolClass = hasilKelas.get();
         if (!schoolClass.isActive()) {
             throw new IllegalArgumentException("Kelas tidak aktif.");
         }
 
-        Subject subject = academicDAO.findSubjectById(subjectId)
-                .orElseThrow(() -> new IllegalArgumentException("Mata pelajaran tidak ditemukan."));
+        Optional<Subject> hasilMapel = academicDAO.findSubjectById(subjectId);
+        if (hasilMapel.isEmpty()) {
+            throw new IllegalArgumentException("Mata pelajaran tidak ditemukan.");
+        }
+        Subject subject = hasilMapel.get();
         if (!subject.isActive()) {
             throw new IllegalArgumentException("Mata pelajaran tidak aktif.");
         }
 
-        Semester semester = academicDAO.findSemesterById(semesterId)
-                .orElseThrow(() -> new IllegalArgumentException("Semester tidak ditemukan."));
+        Optional<Semester> hasilSemester = academicDAO.findSemesterById(semesterId);
+        if (hasilSemester.isEmpty()) {
+            throw new IllegalArgumentException("Semester tidak ditemukan.");
+        }
+        Semester semester = hasilSemester.get();
         if (!semester.isActive()) {
             throw new IllegalArgumentException("Semester tidak aktif.");
         }
@@ -641,13 +712,18 @@ public class AcademicService {
                     "Semester dan kelas harus berada pada tahun ajaran yang sama.");
         }
 
-        boolean duplicate = academicDAO.findAllTeachingAssignments().stream()
-                .anyMatch(a -> a.getTeacherId().equals(teacherId)
-                        && a.getClassId().equals(classId)
-                        && a.getSubjectId().equals(subjectId)
-                        && a.getSemesterId().equals(semesterId));
+        boolean adaDuplikat = false;
+        for (TeachingAssignment penugasan : academicDAO.findAllTeachingAssignments()) {
+            if (penugasan.getTeacherId().equals(teacherId)
+                    && penugasan.getClassId().equals(classId)
+                    && penugasan.getSubjectId().equals(subjectId)
+                    && penugasan.getSemesterId().equals(semesterId)) {
+                adaDuplikat = true;
+                break;
+            }
+        }
 
-        if (duplicate) {
+        if (adaDuplikat) {
             throw new IllegalArgumentException(
                     "Penugasan mengajar untuk guru, kelas, mata pelajaran, dan semester ini sudah ada.");
         }
@@ -687,8 +763,11 @@ public class AcademicService {
     public void deactivateTeachingAssignment(Long assignmentId) {
         requireAdminIfAuthenticated();
 
-        TeachingAssignment assignment = academicDAO.findTeachingAssignmentById(assignmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Penugasan mengajar tidak ditemukan."));
+        Optional<TeachingAssignment> hasilPenugasan = academicDAO.findTeachingAssignmentById(assignmentId);
+        if (hasilPenugasan.isEmpty()) {
+            throw new IllegalArgumentException("Penugasan mengajar tidak ditemukan.");
+        }
+        TeachingAssignment assignment = hasilPenugasan.get();
 
         assignment.setActive(false);
         academicDAO.updateTeachingAssignment(assignment);
@@ -707,8 +786,11 @@ public class AcademicService {
 
         validateStudentExistsAndActive(studentId);
 
-        SchoolClass schoolClass = academicDAO.findClassById(classId)
-                .orElseThrow(() -> new IllegalArgumentException("Kelas tidak ditemukan."));
+        Optional<SchoolClass> hasilKelas = academicDAO.findClassById(classId);
+        if (hasilKelas.isEmpty()) {
+            throw new IllegalArgumentException("Kelas tidak ditemukan.");
+        }
+        SchoolClass schoolClass = hasilKelas.get();
         if (!schoolClass.isActive()) {
             throw new IllegalArgumentException("Kelas tidak aktif.");
         }
@@ -755,15 +837,20 @@ public class AcademicService {
                     "Status perpindahan harus NAIK_KELAS atau PINDAH.");
         }
 
-        SchoolClass targetClass = academicDAO.findClassById(targetClassId)
-                .orElseThrow(() -> new IllegalArgumentException("Kelas tujuan tidak ditemukan."));
+        Optional<SchoolClass> hasilKelasTujuan = academicDAO.findClassById(targetClassId);
+        if (hasilKelasTujuan.isEmpty()) {
+            throw new IllegalArgumentException("Kelas tujuan tidak ditemukan.");
+        }
+        SchoolClass targetClass = hasilKelasTujuan.get();
         if (!targetClass.isActive()) {
             throw new IllegalArgumentException("Kelas tujuan tidak aktif.");
         }
 
-        StudentPlacement currentPlacement = academicDAO.findActivePlacementByStudentId(studentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Siswa tidak memiliki penempatan kelas aktif."));
+        Optional<StudentPlacement> hasilPenempatan = academicDAO.findActivePlacementByStudentId(studentId);
+        if (hasilPenempatan.isEmpty()) {
+            throw new IllegalArgumentException("Siswa tidak memiliki penempatan kelas aktif.");
+        }
+        StudentPlacement currentPlacement = hasilPenempatan.get();
 
         if (currentPlacement.getClassId().equals(targetClassId)) {
             throw new IllegalArgumentException("Kelas tujuan tidak boleh sama dengan kelas saat ini.");
@@ -807,9 +894,11 @@ public class AcademicService {
                     "Status akhir penempatan harus LULUS atau KELUAR.");
         }
 
-        StudentPlacement currentPlacement = academicDAO.findActivePlacementByStudentId(studentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Siswa tidak memiliki penempatan kelas aktif."));
+        Optional<StudentPlacement> hasilPenempatan = academicDAO.findActivePlacementByStudentId(studentId);
+        if (hasilPenempatan.isEmpty()) {
+            throw new IllegalArgumentException("Siswa tidak memiliki penempatan kelas aktif.");
+        }
+        StudentPlacement currentPlacement = hasilPenempatan.get();
 
         if (exitDate == null || exitDate.isBefore(currentPlacement.getEntryDate())) {
             throw new IllegalArgumentException(
@@ -843,8 +932,11 @@ public class AcademicService {
             throw new IllegalArgumentException("ID guru wajib diisi.");
         }
         if (teacherDAO != null) {
-            Teacher teacher = teacherDAO.findById(teacherId)
-                    .orElseThrow(() -> new IllegalArgumentException("Data guru tidak ditemukan."));
+            Optional<Teacher> hasilGuru = teacherDAO.findById(teacherId);
+            if (hasilGuru.isEmpty()) {
+                throw new IllegalArgumentException("Data guru tidak ditemukan.");
+            }
+            Teacher teacher = hasilGuru.get();
             if (!teacher.isActive()) {
                 throw new IllegalArgumentException("Guru tidak aktif.");
             }
@@ -856,8 +948,11 @@ public class AcademicService {
             throw new IllegalArgumentException("ID siswa wajib diisi.");
         }
         if (studentDAO != null) {
-            Student student = studentDAO.findById(studentId)
-                    .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
+            Optional<Student> hasilSiswa = studentDAO.findById(studentId);
+            if (hasilSiswa.isEmpty()) {
+                throw new IllegalArgumentException("Data siswa tidak ditemukan.");
+            }
+            Student student = hasilSiswa.get();
             if (!student.isActive()) {
                 throw new IllegalArgumentException("Siswa tidak aktif.");
             }

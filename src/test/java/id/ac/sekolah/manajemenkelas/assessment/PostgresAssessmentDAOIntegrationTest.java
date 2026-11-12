@@ -17,7 +17,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import id.ac.sekolah.manajemenkelas.academic.dao.InMemoryAcademicDAO;
 import id.ac.sekolah.manajemenkelas.academic.dao.PostgresAcademicDAO;
 import id.ac.sekolah.manajemenkelas.academic.model.AcademicYear;
 import id.ac.sekolah.manajemenkelas.academic.model.SchoolClass;
@@ -25,7 +24,6 @@ import id.ac.sekolah.manajemenkelas.academic.model.Semester;
 import id.ac.sekolah.manajemenkelas.academic.model.Subject;
 import id.ac.sekolah.manajemenkelas.academic.model.TeachingAssignment;
 import id.ac.sekolah.manajemenkelas.academic.service.AcademicService;
-import id.ac.sekolah.manajemenkelas.assessment.dao.InMemoryAssessmentDAO;
 import id.ac.sekolah.manajemenkelas.assessment.dao.PostgresAssessmentDAO;
 import id.ac.sekolah.manajemenkelas.assessment.model.Assessment;
 import id.ac.sekolah.manajemenkelas.assessment.model.AssessmentSummary;
@@ -40,11 +38,9 @@ import id.ac.sekolah.manajemenkelas.auth.service.AuthService;
 import id.ac.sekolah.manajemenkelas.config.DatabaseConfig;
 import id.ac.sekolah.manajemenkelas.core.security.PasswordHasher;
 import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
-import id.ac.sekolah.manajemenkelas.student.dao.InMemoryStudentDAO;
 import id.ac.sekolah.manajemenkelas.student.dao.PostgresStudentDAO;
 import id.ac.sekolah.manajemenkelas.student.model.Student;
 import id.ac.sekolah.manajemenkelas.student.service.StudentService;
-import id.ac.sekolah.manajemenkelas.teacher.dao.InMemoryTeacherDAO;
 import id.ac.sekolah.manajemenkelas.teacher.dao.PostgresTeacherDAO;
 import id.ac.sekolah.manajemenkelas.teacher.model.Teacher;
 import id.ac.sekolah.manajemenkelas.teacher.service.TeacherService;
@@ -411,46 +407,6 @@ class PostgresAssessmentDAOIntegrationTest {
         // Teacher account without teacherId cannot access
         createAndLoginTeacherUser(null, "test_p5_guru_unlinked", "Guru Tanpa Link");
         assertThrows(IllegalArgumentException.class, () -> assessmentService.getAllAssessments());
-    }
-
-    @Test
-    void inMemoryAssessmentFallbackWorksCleanly() {
-        SessionContext.getInstance().startSession(1L, null, "admin", "Administrator", RoleMapper.ROLE_ADMIN);
-
-        InMemoryStudentDAO studentDAO = new InMemoryStudentDAO();
-        InMemoryTeacherDAO teacherDAO = new InMemoryTeacherDAO();
-        InMemoryAcademicDAO academicDAO = new InMemoryAcademicDAO();
-        InMemoryAssessmentDAO assessmentDAO = new InMemoryAssessmentDAO();
-
-        StudentService studentService = new StudentService(studentDAO);
-        TeacherService teacherService = new TeacherService(teacherDAO);
-        AcademicService academicService = new AcademicService(academicDAO, studentDAO, teacherDAO);
-        AssessmentService assessmentService = new AssessmentService(assessmentDAO, academicDAO, studentDAO);
-
-        Teacher t = teacherService.createTeacher(
-                "INMEM_NIP", "Guru InMem", "L", "", "", "Jl. A", "S1", LocalDate.of(2020, 1, 1));
-        Student s = studentService.createStudent(
-                "INMEM_NIS", "INMEM_NISN", "Siswa InMem", "P",
-                LocalDate.of(2016, 1, 1), "Pekanbaru", "Jl. B", "Ibu", "0812");
-        AcademicYear y = academicService.createAcademicYear(
-                "2026/2027", LocalDate.of(2026, 7, 1), LocalDate.of(2027, 6, 30));
-        Semester sem = academicService.createSemester(
-                y.getId(), 1, "Ganjil", LocalDate.of(2026, 7, 1), LocalDate.of(2026, 12, 20));
-        SchoolClass c = academicService.createClass(y.getId(), "1A", 1, 30);
-        Subject sub = academicService.createSubject("INMEM_SBJ", "SBdP", "Wajib");
-        TeachingAssignment ta = academicService.createTeachingAssignment(
-                t.getId(), c.getId(), sub.getId(), sem.getId());
-        academicService.placeStudentInClass(s.getId(), c.getId(), LocalDate.of(2026, 7, 10));
-
-        Assessment a = assessmentService.createAssessment(
-                ta.getId(), "Proyek Kolase", Assessment.TYPE_PROYEK, LocalDate.of(2026, 8, 20),
-                new BigDecimal("100"), "");
-        StudentScore score = assessmentService.recordScore(
-                a.getId(), s.getId(), new BigDecimal("85.5"), "Rapi");
-        assertNotNull(score.getId());
-
-        AssessmentSummary summary = assessmentService.getAssessmentScoreSummary(a.getId());
-        assertEquals(0, new BigDecimal("85.50").compareTo(summary.getAverageScore()));
     }
 }
 

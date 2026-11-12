@@ -106,17 +106,20 @@ public class FormField extends JPanel {
             component.setBackground(BotanicalTheme.WHITE);
             component.setBorder(createInputBorder(BotanicalTheme.BORDER));
             component.setPreferredSize(new Dimension(240, BotanicalTheme.INPUT_HEIGHT));
-        } else if (component instanceof JComboBox<?> combo) {
+        } else if (component instanceof JComboBox) {
+            JComboBox<?> combo = (JComboBox<?>) component;
             combo.setFont(BotanicalTheme.FONT_BODY);
             combo.setForeground(BotanicalTheme.TEXT_PRIMARY);
             combo.setBackground(BotanicalTheme.WHITE);
             combo.setBorder(BorderFactory.createLineBorder(BotanicalTheme.BORDER, 1));
             combo.setPreferredSize(new Dimension(240, BotanicalTheme.INPUT_HEIGHT));
-        } else if (component instanceof JScrollPane scroll) {
+        } else if (component instanceof JScrollPane) {
+            JScrollPane scroll = (JScrollPane) component;
             scroll.setBorder(BorderFactory.createLineBorder(BotanicalTheme.BORDER, 1));
             scroll.getViewport().setBackground(BotanicalTheme.WHITE);
             Component view = scroll.getViewport().getView();
-            if (view instanceof JTextArea area) {
+            if (view instanceof JTextArea) {
+                JTextArea area = (JTextArea) view;
                 area.setFont(BotanicalTheme.FONT_BODY);
                 area.setForeground(BotanicalTheme.TEXT_PRIMARY);
                 area.setBackground(BotanicalTheme.WHITE);

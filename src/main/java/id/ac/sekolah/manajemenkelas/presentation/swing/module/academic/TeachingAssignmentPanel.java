@@ -147,22 +147,46 @@ public class TeachingAssignmentPanel extends JPanel implements ScreenPage {
                     @SuppressWarnings("unchecked")
                     List<TeachingAssignment> assignments = (List<TeachingAssignment>) arr[4];
 
-                    this.activeTeachers = teachers.stream().filter(Teacher::isActive).toList();
-                    this.activeClasses = classes.stream().filter(SchoolClass::isActive).toList();
-                    this.activeSubjects = subjects.stream().filter(Subject::isActive).toList();
-                    this.activeSemesters = semesters.stream().filter(Semester::isActive).toList();
-
+                    List<Teacher> daftarGuruAktif = new ArrayList<>();
                     Map<Long, String> tMap = new HashMap<>();
-                    teachers.forEach(t -> tMap.put(t.getId(), t.getFullName()));
+                    for (Teacher t : teachers) {
+                        if (t.isActive()) {
+                            daftarGuruAktif.add(t);
+                        }
+                        tMap.put(t.getId(), t.getFullName());
+                    }
+                    this.activeTeachers = daftarGuruAktif;
                     this.teacherNames = tMap;
 
+                    List<SchoolClass> daftarKelasAktif = new ArrayList<>();
                     Map<Long, String> cMap = new HashMap<>();
-                    classes.forEach(c -> cMap.put(c.getId(), c.getName()));
+                    for (SchoolClass c : classes) {
+                        if (c.isActive()) {
+                            daftarKelasAktif.add(c);
+                        }
+                        cMap.put(c.getId(), c.getName());
+                    }
+                    this.activeClasses = daftarKelasAktif;
                     this.classNames = cMap;
 
+                    List<Subject> daftarMapelAktif = new ArrayList<>();
                     Map<Long, String> subMap = new HashMap<>();
-                    subjects.forEach(s -> subMap.put(s.getId(), s.getCode() + " - " + s.getName()));
+                    for (Subject s : subjects) {
+                        if (s.isActive()) {
+                            daftarMapelAktif.add(s);
+                        }
+                        subMap.put(s.getId(), s.getCode() + " - " + s.getName());
+                    }
+                    this.activeSubjects = daftarMapelAktif;
                     this.subjectNames = subMap;
+
+                    List<Semester> daftarSemesterAktif = new ArrayList<>();
+                    for (Semester s : semesters) {
+                        if (s.isActive()) {
+                            daftarSemesterAktif.add(s);
+                        }
+                    }
+                    this.activeSemesters = daftarSemesterAktif;
 
                     Map<Long, String> semMap = new HashMap<>();
                     updatingFilter = true;
@@ -283,10 +307,18 @@ public class TeachingAssignmentPanel extends JPanel implements ScreenPage {
             super(owner, "Tambah Penugasan Mengajar", "Simpan Penugasan", 580, 420);
             this.container = container;
 
-            teachers.forEach(t -> teacherCombo.addItem(new SelectItem<>(t, t.getFullName() + " (" + t.getNip() + ")")));
-            classes.forEach(c -> classCombo.addItem(new SelectItem<>(c, c.getName() + " (Tingkat " + c.getGradeLevel() + ")")));
-            subjects.forEach(s -> subjectCombo.addItem(new SelectItem<>(s, s.getCode() + " - " + s.getName())));
-            semesters.forEach(s -> semesterCombo.addItem(new SelectItem<>(s, s.getName())));
+            for (Teacher t : teachers) {
+                teacherCombo.addItem(new SelectItem<>(t, t.getFullName() + " (" + t.getNip() + ")"));
+            }
+            for (SchoolClass c : classes) {
+                classCombo.addItem(new SelectItem<>(c, c.getName() + " (Tingkat " + c.getGradeLevel() + ")"));
+            }
+            for (Subject s : subjects) {
+                subjectCombo.addItem(new SelectItem<>(s, s.getCode() + " - " + s.getName()));
+            }
+            for (Semester s : semesters) {
+                semesterCombo.addItem(new SelectItem<>(s, s.getName()));
+            }
 
             addSectionCard(
                     "Rincian Penugasan Mengajar",

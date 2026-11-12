@@ -25,6 +25,8 @@ import id.ac.sekolah.manajemenkelas.config.AppConfig;
 import id.ac.sekolah.manajemenkelas.config.DatabaseConfig;
 import id.ac.sekolah.manajemenkelas.core.security.PasswordHasher;
 import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
+import id.ac.sekolah.manajemenkelas.teacher.dao.PostgresTeacherDAO;
+import id.ac.sekolah.manajemenkelas.teacher.model.Teacher;
 
 class PostgresAuthDAOIntegrationTest {
 
@@ -44,10 +46,15 @@ class PostgresAuthDAOIntegrationTest {
     }
 
     private void deleteTestUsers() throws SQLException {
-        try (Connection conn = DatabaseConfig.getConnection();
-             PreparedStatement ps = conn.prepareStatement(
-                     "DELETE FROM pengguna WHERE nama_pengguna LIKE 'test_phase1_%'")) {
-            ps.executeUpdate();
+        try (Connection conn = DatabaseConfig.getConnection()) {
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "DELETE FROM pengguna WHERE nama_pengguna LIKE 'test_phase1_%'")) {
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "DELETE FROM guru WHERE nip LIKE 'TEST_AUTH_GURU_%'")) {
+                ps.executeUpdate();
+            }
         }
     }
 
@@ -157,6 +164,53 @@ class PostgresAuthDAOIntegrationTest {
         AuthService authService = new AuthService(authDAO, hasher);
         assertFalse(authService.login(TEST_INACTIVE_USER, "Nonaktif#123"));
         assertFalse(authService.isAuthenticated());
+    }
+
+    @Test
+    void adminCanSaveUpdateAndLogInWithLinkedTeacherAccount() {
+        PostgresAuthDAO authDAO = new PostgresAuthDAO();
+        PostgresTeacherDAO teacherDAO = new PostgresTeacherDAO();
+        PasswordHasher hasher = new PasswordHasher();
+        new AuthBootstrapSeeder(authDAO, hasher).seedDefaultUsers();
+        AuthService authService = new AuthService(authDAO, hasher);
+
+        Teacher guruBaru = new Teacher(
+                null,
+                "TEST_AUTH_GURU_01",
+                "Siti Nurhaliza, S.Pd.",
+                "P",
+                "siti.test@sekolah.sch.id",
+                "08123456789",
+                "Jl. Pendidikan No. 1",
+                "S1 PGSD",
+                java.time.LocalDate.of(2025, 7, 1),
+                true);
+        teacherDAO.save(guruBaru);
+        assertNotNull(guruBaru.getId());
+
+        assertTrue(authService.login(AppConfig.DEFAULT_ADMIN_USERNAME, AppConfig.DEFAULT_ADMIN_PASSWORD));
+        User akun = authService.saveOrUpdateTeacherAccount(
+                guruBaru.getId(),
+                "test_phase1_siti",
+                "SandiGuru#1",
+                guruBaru.getFullName(),
+                true);
+        assertNotNull(akun.getId());
+        assertEquals(guruBaru.getId(), akun.getTeacherId());
+        assertTrue(authService.getTeacherAccountsMap().containsKey(guruBaru.getId()));
+
+        authService.saveOrUpdateTeacherAccount(
+                guruBaru.getId(),
+                "test_phase1_siti_v2",
+                "SandiGuru#2",
+                guruBaru.getFullName(),
+                true);
+        authService.logout();
+
+        assertFalse(authService.login("test_phase1_siti", "SandiGuru#1"));
+        assertTrue(authService.login("test_phase1_siti_v2", "SandiGuru#2"));
+        assertEquals(RoleMapper.ROLE_TEACHER, SessionContext.getInstance().getRole());
+        assertEquals(guruBaru.getId(), SessionContext.getInstance().getTeacherId());
     }
 }
 

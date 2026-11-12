@@ -1,6 +1,5 @@
 package id.ac.sekolah.manajemenkelas.qa;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -8,9 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -22,13 +18,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Scanner;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import id.ac.sekolah.manajemenkelas.academic.dao.InMemoryAcademicDAO;
 import id.ac.sekolah.manajemenkelas.academic.dao.PostgresAcademicDAO;
 import id.ac.sekolah.manajemenkelas.academic.model.AcademicYear;
 import id.ac.sekolah.manajemenkelas.academic.model.HomeroomAssignment;
@@ -38,16 +32,13 @@ import id.ac.sekolah.manajemenkelas.academic.model.StudentPlacement;
 import id.ac.sekolah.manajemenkelas.academic.model.Subject;
 import id.ac.sekolah.manajemenkelas.academic.model.TeachingAssignment;
 import id.ac.sekolah.manajemenkelas.academic.service.AcademicService;
-import id.ac.sekolah.manajemenkelas.assessment.dao.InMemoryAssessmentDAO;
 import id.ac.sekolah.manajemenkelas.assessment.dao.PostgresAssessmentDAO;
 import id.ac.sekolah.manajemenkelas.assessment.model.Assessment;
 import id.ac.sekolah.manajemenkelas.assessment.model.StudentScore;
 import id.ac.sekolah.manajemenkelas.assessment.service.AssessmentService;
-import id.ac.sekolah.manajemenkelas.attendance.dao.InMemoryAttendanceDAO;
 import id.ac.sekolah.manajemenkelas.attendance.dao.PostgresAttendanceDAO;
 import id.ac.sekolah.manajemenkelas.attendance.model.Attendance;
 import id.ac.sekolah.manajemenkelas.attendance.service.AttendanceService;
-import id.ac.sekolah.manajemenkelas.auth.dao.InMemoryAuthDAO;
 import id.ac.sekolah.manajemenkelas.auth.dao.PostgresAuthDAO;
 import id.ac.sekolah.manajemenkelas.auth.model.RoleMapper;
 import id.ac.sekolah.manajemenkelas.auth.model.User;
@@ -56,22 +47,9 @@ import id.ac.sekolah.manajemenkelas.config.DatabaseConfig;
 import id.ac.sekolah.manajemenkelas.core.security.PasswordHasher;
 import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
 import id.ac.sekolah.manajemenkelas.core.util.JdbcUtils;
-import id.ac.sekolah.manajemenkelas.presentation.cli.CliApplication;
-import id.ac.sekolah.manajemenkelas.presentation.cli.academic.AcademicMenu;
-import id.ac.sekolah.manajemenkelas.presentation.cli.assessment.AssessmentMenu;
-import id.ac.sekolah.manajemenkelas.presentation.cli.attendance.AttendanceMenu;
-import id.ac.sekolah.manajemenkelas.presentation.cli.menu.MenuNavigator;
-import id.ac.sekolah.manajemenkelas.presentation.cli.report.ReportMenu;
-import id.ac.sekolah.manajemenkelas.presentation.cli.student.StudentMenu;
-import id.ac.sekolah.manajemenkelas.presentation.cli.teacher.TeacherMenu;
-import id.ac.sekolah.manajemenkelas.dashboard.service.DashboardService;
-import id.ac.sekolah.manajemenkelas.report.dao.InMemoryReportDAO;
-import id.ac.sekolah.manajemenkelas.report.service.ReportService;
-import id.ac.sekolah.manajemenkelas.student.dao.InMemoryStudentDAO;
 import id.ac.sekolah.manajemenkelas.student.dao.PostgresStudentDAO;
 import id.ac.sekolah.manajemenkelas.student.model.Student;
 import id.ac.sekolah.manajemenkelas.student.service.StudentService;
-import id.ac.sekolah.manajemenkelas.teacher.dao.InMemoryTeacherDAO;
 import id.ac.sekolah.manajemenkelas.teacher.dao.PostgresTeacherDAO;
 import id.ac.sekolah.manajemenkelas.teacher.model.Teacher;
 import id.ac.sekolah.manajemenkelas.teacher.service.TeacherService;
@@ -79,11 +57,9 @@ import id.ac.sekolah.manajemenkelas.teacher.service.TeacherService;
 class FullQaStabilizationIntegrationTest {
 
     private Long previouslyActiveYearId;
-    private PrintStream originalOut;
 
     @BeforeEach
     void setup() throws SQLException {
-        originalOut = System.out;
         SessionContext.getInstance().endSession();
         cleanupTestRows();
         previouslyActiveYearId = findActiveNonTestYearId();
@@ -91,7 +67,6 @@ class FullQaStabilizationIntegrationTest {
 
     @AfterEach
     void teardown() throws SQLException {
-        System.setOut(originalOut);
         SessionContext.getInstance().endSession();
         cleanupTestRows();
         if (previouslyActiveYearId != null) {
@@ -338,7 +313,7 @@ class FullQaStabilizationIntegrationTest {
     }
 
     @Test
-    void crudUpdatesValidationsAndInMemoryParityVerified() {
+    void crudUpdatesAndValidationsVerified() {
         PostgresStudentDAO studentDAO = new PostgresStudentDAO();
         PostgresTeacherDAO teacherDAO = new PostgresTeacherDAO();
         PostgresAcademicDAO academicDAO = new PostgresAcademicDAO();
@@ -425,111 +400,9 @@ class FullQaStabilizationIntegrationTest {
                 s1.getId(), LocalDate.of(2032, 7, 1), StudentPlacement.STATUS_LULUS));
 
         // AttendanceService unlinked teacher check on getAttendanceByDate
-        AttendanceService unlinkedAttSvc = new AttendanceService(new InMemoryAttendanceDAO(), academicDAO, studentDAO);
+        AttendanceService unlinkedAttSvc = new AttendanceService(new PostgresAttendanceDAO(), academicDAO, studentDAO);
         SessionContext.getInstance().startSession(88L, null, "guru_unlinked", "Guru Unlinked", RoleMapper.ROLE_TEACHER);
         assertThrows(IllegalArgumentException.class, () -> unlinkedAttSvc.getAttendanceByDate(LocalDate.of(2033, 2, 10)));
-
-        // InMemoryAssessmentDAO intra-batch atomicity & InMemoryAttendanceDAO duplicate enforcement
-        InMemoryAssessmentDAO memAssessDAO = new InMemoryAssessmentDAO();
-        assertThrows(IllegalArgumentException.class, () -> memAssessDAO.saveAllScores(List.of(
-                new StudentScore(null, 1L, 10L, BigDecimal.TEN, "", null),
-                new StudentScore(null, 1L, 10L, BigDecimal.valueOf(20), "", null))));
-        assertTrue(memAssessDAO.findScoresByAssessmentId(1L).isEmpty());
-
-        InMemoryAttendanceDAO memAttDAO = new InMemoryAttendanceDAO();
-        memAttDAO.save(new Attendance(null, 10L, 1L, LocalDate.of(2033, 2, 10), Attendance.STATUS_HADIR, "", 1L));
-        assertThrows(IllegalArgumentException.class, () -> memAttDAO.save(
-                new Attendance(null, 10L, 1L, LocalDate.of(2033, 2, 10), Attendance.STATUS_SAKIT, "", 1L)));
-    }
-
-    @Test
-    void cliCrashPreventionMalformedInputsEmptyDataAndAuthErrorHandlingVerified() {
-        InMemoryStudentDAO studentDAO = new InMemoryStudentDAO();
-        InMemoryTeacherDAO teacherDAO = new InMemoryTeacherDAO();
-        InMemoryAcademicDAO academicDAO = new InMemoryAcademicDAO();
-        InMemoryAttendanceDAO attendanceDAO = new InMemoryAttendanceDAO();
-        InMemoryAssessmentDAO assessmentDAO = new InMemoryAssessmentDAO();
-        InMemoryReportDAO reportDAO = new InMemoryReportDAO(studentDAO, teacherDAO, academicDAO, attendanceDAO, assessmentDAO);
-
-        StudentService studentSvc = new StudentService(studentDAO);
-        TeacherService teacherSvc = new TeacherService(teacherDAO);
-        AcademicService academicSvc = new AcademicService(academicDAO, studentDAO, teacherDAO);
-        AttendanceService attendanceSvc = new AttendanceService(attendanceDAO, academicDAO, studentDAO);
-        AssessmentService assessmentSvc = new AssessmentService(assessmentDAO, academicDAO, studentDAO);
-        DashboardService dashboardSvc = new DashboardService(reportDAO);
-        ReportService reportSvc = new ReportService(reportDAO, studentDAO);
-
-        Student student = studentSvc.createStudent(
-                "CLI_S1", "CLI_N1", "Siswa Edit", "L", LocalDate.of(2016, 1, 1), "PKU", "Jl", "Ortu", "08");
-        Teacher teacher1 = teacherSvc.createTeacher(
-                "CLI_G1", "Guru Edit", "P", "", "", "Jl", "S1", LocalDate.of(2021, 1, 1));
-        Teacher teacher2 = teacherSvc.createTeacher(
-                "CLI_G2", "Guru Lain", "L", "", "", "Jl", "S1", LocalDate.of(2021, 1, 1));
-        AcademicYear y = academicSvc.createAcademicYear(
-                "CLI_2026/2027", LocalDate.of(2026, 7, 1), LocalDate.of(2027, 6, 30));
-        SchoolClass c2 = academicSvc.createClass(y.getId(), "CLI_2B", 2, 20);
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        System.setOut(new PrintStream(baos, true, StandardCharsets.UTF_8));
-
-        // 1. Admin edits student/teacher with malformed dates -> MUST NOT crash with DateTimeParseException
-        SessionContext.getInstance().startSession(1L, null, "admin", "Admin", RoleMapper.ROLE_ADMIN);
-        String editInputs = String.join("\n",
-                // StudentMenu -> 4 (Edit) -> id -> keep fields -> bad date -> 0 exit
-                "4", String.valueOf(student.getId()), "", "", "", "", "bukan-tanggal", "0",
-                // TeacherMenu -> 4 (Edit) -> id -> keep fields -> bad date -> 0 exit
-                "4", String.valueOf(teacher1.getId()), "", "", "", "", "", "", "", "99-99-9999", "0"
-        ) + "\n";
-        Scanner editScanner = new Scanner(new ByteArrayInputStream(editInputs.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
-        assertDoesNotThrow(() -> new StudentMenu(editScanner, studentSvc, academicSvc).show());
-        assertDoesNotThrow(() -> new TeacherMenu(editScanner, teacherSvc).show());
-
-        // 2. AcademicMenu EOF without "0" MUST NOT throw NoSuchElementException
-        Scanner eofScanner = new Scanner(new ByteArrayInputStream("1\n".getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
-        assertDoesNotThrow(() -> new AcademicMenu(eofScanner, academicSvc, studentSvc, teacherSvc).show());
-
-        // 3. Teacher querying empty Attendance/Assessment/Report & unauthorized class/report access in CLI
-        SessionContext.getInstance().startSession(2L, teacher1.getId(), "guru_cli", "Guru Edit", RoleMapper.ROLE_TEACHER);
-        String teacherBadInputs = String.join("\n",
-                // AttendanceMenu: 3 (Lihat per Tanggal -> empty), 4 (Lihat per Kelas -> c2 unauthorized), 0
-                "3", "2026-09-01",
-                "4", String.valueOf(c2.getId()),
-                "0",
-                // AssessmentMenu: 2 (Daftar Penilaian -> empty), 4 (Input Nilai -> non-numeric id), 0
-                "2",
-                "4", "abc",
-                "0",
-                // ReportMenu: 7 (Ringkasan Nilai Siswa -> student outside scope), 0
-                "7", String.valueOf(student.getId()),
-                "0"
-        ) + "\n";
-        Scanner teacherScanner = new Scanner(new ByteArrayInputStream(teacherBadInputs.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
-        assertDoesNotThrow(() -> new AttendanceMenu(teacherScanner, attendanceSvc, academicSvc, studentSvc).show());
-        assertDoesNotThrow(() -> new AssessmentMenu(teacherScanner, assessmentSvc, academicSvc, studentSvc, teacherSvc).show());
-        assertDoesNotThrow(() -> new ReportMenu(teacherScanner, dashboardSvc, reportSvc).show());
-
-        // 4. Failed login in CliApplication -> clean retry / exit
-        SessionContext.getInstance().endSession();
-        String failedLoginInput = String.join("\n", "1", "admin", "wrong_pass", "invalid_opt", "0") + "\n";
-        Scanner loginScanner = new Scanner(new ByteArrayInputStream(failedLoginInput.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
-        assertDoesNotThrow(() -> new CliApplication(
-                loginScanner, new InMemoryAuthDAO(), studentDAO, teacherDAO, academicDAO, attendanceDAO, assessmentDAO, reportDAO
-        ).start());
-
-        // 5. MenuNavigator direct parsing helpers
-        Scanner navScanner = new Scanner(new ByteArrayInputStream("42\n2026-08-17\n95.5\nbad\n".getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
-        assertEquals(42L, MenuNavigator.readLong(navScanner));
-        assertEquals(LocalDate.of(2026, 8, 17), MenuNavigator.readDate(navScanner));
-        assertEquals(new BigDecimal("95.5"), MenuNavigator.readBigDecimal(navScanner));
-        assertThrows(IllegalArgumentException.class, () -> MenuNavigator.readLong(navScanner));
-
-        String output = baos.toString(StandardCharsets.UTF_8);
-        assertTrue(output.contains("Format tanggal harus YYYY-MM-DD."));
-        assertTrue(output.contains("Akses ditolak: guru tidak memiliki penugasan pada kelas ini."));
-        assertTrue(output.contains("Input ID harus berupa angka."));
-        assertTrue(output.contains("Login gagal. Periksa username dan password."));
-        assertTrue(output.contains("Pilihan tidak valid."));
-        assertNotNull(teacher2.getId());
     }
 
     @Test

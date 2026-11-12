@@ -2,50 +2,49 @@ package id.ac.sekolah.manajemenkelas.report.model;
 
 public class ClassStudentCountReport {
 
-    private final Long classId;
-    private final String className;
-    private final int gradeLevel;
-    private final String academicYearName;
-    private final int capacity;
-    private final int activeStudentCount;
+    private final Long idKelas;
+    private final String namaKelas;
+    private final int tingkatKelas;
+    private final String namaTahunAjaran;
+    private final int kapasitas;
+    private final int jumlahSiswaAktif;
 
     public ClassStudentCountReport(
-            Long classId,
-            String className,
-            int gradeLevel,
-            String academicYearName,
-            int capacity,
-            int activeStudentCount) {
-        this.classId = classId;
-        this.className = className;
-        this.gradeLevel = gradeLevel;
-        this.academicYearName = academicYearName;
-        this.capacity = capacity;
-        this.activeStudentCount = activeStudentCount;
+            Long idKelas,
+            String namaKelas,
+            int tingkatKelas,
+            String namaTahunAjaran,
+            int kapasitas,
+            int jumlahSiswaAktif) {
+        this.idKelas = idKelas;
+        this.namaKelas = namaKelas;
+        this.tingkatKelas = tingkatKelas;
+        this.namaTahunAjaran = namaTahunAjaran;
+        this.kapasitas = kapasitas;
+        this.jumlahSiswaAktif = jumlahSiswaAktif;
     }
 
     public Long getClassId() {
-        return classId;
+        return idKelas;
     }
 
     public String getClassName() {
-        return className;
+        return namaKelas;
     }
 
     public int getGradeLevel() {
-        return gradeLevel;
+        return tingkatKelas;
     }
 
     public String getAcademicYearName() {
-        return academicYearName;
+        return namaTahunAjaran;
     }
 
     public int getCapacity() {
-        return capacity;
+        return kapasitas;
     }
 
     public int getActiveStudentCount() {
-        return activeStudentCount;
+        return jumlahSiswaAktif;
     }
 }
-

@@ -5,103 +5,102 @@ import java.time.LocalDate;
 
 public class AssessmentReport {
 
-    private final Long assessmentId;
-    private final Long teachingAssignmentId;
-    private final String className;
-    private final String subjectName;
-    private final String title;
-    private final String assessmentType;
-    private final LocalDate assessmentDate;
-    private final BigDecimal maxScore;
-    private final int scoredStudentsCount;
-    private final BigDecimal averageScore;
-    private final BigDecimal highestScore;
-    private final BigDecimal lowestScore;
-    private final BigDecimal averagePercentage;
+    private final Long idPenilaian;
+    private final Long idPenugasanMengajar;
+    private final String namaKelas;
+    private final String namaMataPelajaran;
+    private final String judul;
+    private final String jenisPenilaian;
+    private final LocalDate tanggalPenilaian;
+    private final BigDecimal nilaiMaksimal;
+    private final int jumlahSiswaDinilai;
+    private final BigDecimal rataRataNilai;
+    private final BigDecimal nilaiTertinggi;
+    private final BigDecimal nilaiTerendah;
+    private final BigDecimal rataRataPersentase;
 
     public AssessmentReport(
-            Long assessmentId,
-            Long teachingAssignmentId,
-            String className,
-            String subjectName,
-            String title,
-            String assessmentType,
-            LocalDate assessmentDate,
-            BigDecimal maxScore,
-            int scoredStudentsCount,
-            BigDecimal averageScore,
-            BigDecimal highestScore,
-            BigDecimal lowestScore,
-            BigDecimal averagePercentage) {
-        this.assessmentId = assessmentId;
-        this.teachingAssignmentId = teachingAssignmentId;
-        this.className = className;
-        this.subjectName = subjectName;
-        this.title = title;
-        this.assessmentType = assessmentType;
-        this.assessmentDate = assessmentDate;
-        this.maxScore = maxScore;
-        this.scoredStudentsCount = scoredStudentsCount;
-        this.averageScore = averageScore;
-        this.highestScore = highestScore;
-        this.lowestScore = lowestScore;
-        this.averagePercentage = averagePercentage;
+            Long idPenilaian,
+            Long idPenugasanMengajar,
+            String namaKelas,
+            String namaMataPelajaran,
+            String judul,
+            String jenisPenilaian,
+            LocalDate tanggalPenilaian,
+            BigDecimal nilaiMaksimal,
+            int jumlahSiswaDinilai,
+            BigDecimal rataRataNilai,
+            BigDecimal nilaiTertinggi,
+            BigDecimal nilaiTerendah,
+            BigDecimal rataRataPersentase) {
+        this.idPenilaian = idPenilaian;
+        this.idPenugasanMengajar = idPenugasanMengajar;
+        this.namaKelas = namaKelas;
+        this.namaMataPelajaran = namaMataPelajaran;
+        this.judul = judul;
+        this.jenisPenilaian = jenisPenilaian;
+        this.tanggalPenilaian = tanggalPenilaian;
+        this.nilaiMaksimal = nilaiMaksimal;
+        this.jumlahSiswaDinilai = jumlahSiswaDinilai;
+        this.rataRataNilai = rataRataNilai;
+        this.nilaiTertinggi = nilaiTertinggi;
+        this.nilaiTerendah = nilaiTerendah;
+        this.rataRataPersentase = rataRataPersentase;
     }
 
     public Long getAssessmentId() {
-        return assessmentId;
+        return idPenilaian;
     }
 
     public Long getTeachingAssignmentId() {
-        return teachingAssignmentId;
+        return idPenugasanMengajar;
     }
 
     public String getClassName() {
-        return className;
+        return namaKelas;
     }
 
     public String getSubjectName() {
-        return subjectName;
+        return namaMataPelajaran;
     }
 
     public String getTitle() {
-        return title;
+        return judul;
     }
 
     public String getAssessmentType() {
-        return assessmentType;
+        return jenisPenilaian;
     }
 
     public LocalDate getAssessmentDate() {
-        return assessmentDate;
+        return tanggalPenilaian;
     }
 
     public BigDecimal getMaxScore() {
-        return maxScore;
+        return nilaiMaksimal;
     }
 
     public int getScoredStudentsCount() {
-        return scoredStudentsCount;
+        return jumlahSiswaDinilai;
     }
 
     public BigDecimal getAverageScore() {
-        return averageScore;
+        return rataRataNilai;
     }
 
     public BigDecimal getHighestScore() {
-        return highestScore;
+        return nilaiTertinggi;
     }
 
     public BigDecimal getLowestScore() {
-        return lowestScore;
+        return nilaiTerendah;
     }
 
     public BigDecimal getAveragePercentage() {
-        return averagePercentage;
+        return rataRataPersentase;
     }
 
     public boolean hasScores() {
-        return scoredStudentsCount > 0 && averageScore != null;
+        return jumlahSiswaDinilai > 0 && rataRataNilai != null;
     }
 }
-

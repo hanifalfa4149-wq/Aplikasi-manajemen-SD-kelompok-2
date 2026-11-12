@@ -27,6 +27,8 @@ import id.ac.sekolah.manajemenkelas.assessment.model.AssessmentSummary;
 import id.ac.sekolah.manajemenkelas.assessment.model.StudentScore;
 import id.ac.sekolah.manajemenkelas.assessment.model.StudentScoreSummary;
 import id.ac.sekolah.manajemenkelas.assessment.service.AssessmentService;
+import id.ac.sekolah.manajemenkelas.auth.model.RoleMapper;
+import id.ac.sekolah.manajemenkelas.core.session.SessionContext;
 import id.ac.sekolah.manajemenkelas.presentation.swing.app.ApplicationContainer;
 import id.ac.sekolah.manajemenkelas.presentation.swing.component.AsyncTaskRunner;
 import id.ac.sekolah.manajemenkelas.presentation.swing.component.ClayCard;
@@ -203,12 +205,41 @@ public class StudentScoresPanel extends JPanel implements ScreenPage {
         feedbackBanner.clear();
         AsyncTaskRunner.run(
                 () -> {
+                    SessionContext session = container.getSessionContext();
                     List<Assessment> assessments = container.getAssessmentService().getAllAssessments();
-                    List<Student> students = container.getStudentService().getAllStudents().stream()
-                            .filter(Student::isActive)
-                            .toList();
+                    List<Student> allActiveStudents = new ArrayList<>();
+                    for (Student siswa : container.getStudentService().getAllStudents()) {
+                        if (siswa.isActive()) {
+                            allActiveStudents.add(siswa);
+                        }
+                    }
                     List<TeachingAssignment> tas = container.getAcademicService().getAllTeachingAssignments();
-                    return new Object[]{assessments, students, tas};
+
+                    List<Student> scopedStudents;
+                    if (session.hasRole(RoleMapper.ROLE_ADMIN)) {
+                        scopedStudents = allActiveStudents;
+                    } else {
+                        Long idGuru = session.resolveTeacherScopeOrNullForAdmin("nilai siswa");
+                        Set<Long> idKelasMengajar = new HashSet<>();
+                        for (TeachingAssignment ta : tas) {
+                            if (ta.isActive() && idGuru.equals(ta.getTeacherId())) {
+                                idKelasMengajar.add(ta.getClassId());
+                            }
+                        }
+                        Set<Long> idSiswaCakupan = new HashSet<>();
+                        for (Long idKelas : idKelasMengajar) {
+                            for (StudentPlacement p : container.getAcademicService().getActivePlacementsByClass(idKelas)) {
+                                idSiswaCakupan.add(p.getStudentId());
+                            }
+                        }
+                        scopedStudents = new ArrayList<>();
+                        for (Student siswa : allActiveStudents) {
+                            if (idSiswaCakupan.contains(siswa.getId())) {
+                                scopedStudents.add(siswa);
+                            }
+                        }
+                    }
+                    return new Object[]{assessments, allActiveStudents, scopedStudents, tas};
                 },
                 () -> stateDeck.showLoading("Memuat data penilaian dan siswa..."),
                 res -> {
@@ -216,22 +247,30 @@ public class StudentScoresPanel extends JPanel implements ScreenPage {
                     @SuppressWarnings("unchecked")
                     List<Assessment> assessments = (List<Assessment>) arr[0];
                     @SuppressWarnings("unchecked")
-                    List<Student> students = (List<Student>) arr[1];
+                    List<Student> allActiveStudents = (List<Student>) arr[1];
                     @SuppressWarnings("unchecked")
-                    List<TeachingAssignment> tas = (List<TeachingAssignment>) arr[2];
+                    List<Student> scopedStudents = (List<Student>) arr[2];
+                    @SuppressWarnings("unchecked")
+                    List<TeachingAssignment> tas = (List<TeachingAssignment>) arr[3];
 
                     this.allAssessments = assessments;
-                    this.activeStudents = students;
+                    this.activeStudents = scopedStudents;
                     Map<Long, Student> sMap = new HashMap<>();
-                    students.forEach(s -> sMap.put(s.getId(), s));
+                    for (Student s : allActiveStudents) {
+                        sMap.put(s.getId(), s);
+                    }
                     this.studentMap = sMap;
 
                     Map<Long, Assessment> aMap = new HashMap<>();
-                    assessments.forEach(a -> aMap.put(a.getId(), a));
+                    for (Assessment a : assessments) {
+                        aMap.put(a.getId(), a);
+                    }
                     this.assessmentMap = aMap;
 
                     Map<Long, TeachingAssignment> tMap = new HashMap<>();
-                    tas.forEach(t -> tMap.put(t.getId(), t));
+                    for (TeachingAssignment t : tas) {
+                        tMap.put(t.getId(), t);
+                    }
                     this.taMap = tMap;
 
                     assessmentCombo.removeAllItems();
@@ -250,7 +289,7 @@ public class StudentScoresPanel extends JPanel implements ScreenPage {
                     }
 
                     studentCombo.removeAllItems();
-                    for (Student s : students) {
+                    for (Student s : scopedStudents) {
                         studentCombo.addItem(new SelectItem<>(s, s.getNis() + " - " + s.getFullName()));
                     }
 
@@ -278,7 +317,15 @@ public class StudentScoresPanel extends JPanel implements ScreenPage {
             return;
         }
         if (mode == Mode.BY_STUDENT && activeStudents.isEmpty()) {
-            stateDeck.showEmpty("Belum ada data siswa aktif", "Tambahkan siswa aktif terlebih dahulu.");
+            currentScores = List.of();
+            stat1.setText("Total Penilaian: 0");
+            stat2.setText("Skor Total: -");
+            stat3.setText("Rata-rata: -");
+            stat4.setText("Persentase: -");
+            stateDeck.showEmpty(
+                    "Belum ada siswa dalam cakupan",
+                    "Belum ada siswa aktif pada kelas yang dapat diakses untuk nilai ini.");
+            updateButtons();
             return;
         }
 

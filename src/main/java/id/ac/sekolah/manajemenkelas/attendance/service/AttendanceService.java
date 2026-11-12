@@ -4,12 +4,15 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
 import id.ac.sekolah.manajemenkelas.academic.dao.AcademicDAO;
+import id.ac.sekolah.manajemenkelas.academic.model.HomeroomAssignment;
 import id.ac.sekolah.manajemenkelas.academic.model.SchoolClass;
 import id.ac.sekolah.manajemenkelas.academic.model.StudentPlacement;
+import id.ac.sekolah.manajemenkelas.academic.model.TeachingAssignment;
 import id.ac.sekolah.manajemenkelas.attendance.dao.AttendanceDAO;
 import id.ac.sekolah.manajemenkelas.attendance.model.Attendance;
 import id.ac.sekolah.manajemenkelas.attendance.model.AttendanceSummary;
@@ -20,7 +23,69 @@ import id.ac.sekolah.manajemenkelas.student.model.Student;
 
 public class AttendanceService {
 
-    public record StudentAttendanceEntry(Long studentId, String status, String notes) {
+    /**
+     * Item data input absensi per siswa pada pencatatan massal satu kelas.
+     */
+    public static final class StudentAttendanceEntry {
+        private final Long studentId;
+        private final String status;
+        private final String notes;
+
+        public StudentAttendanceEntry(Long studentId, String status, String notes) {
+            this.studentId = studentId;
+            this.status = status;
+            this.notes = notes;
+        }
+
+        public Long getStudentId() {
+            return studentId;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public String getNotes() {
+            return notes;
+        }
+
+        public Long studentId() {
+            return studentId;
+        }
+
+        public String status() {
+            return status;
+        }
+
+        public String notes() {
+            return notes;
+        }
+
+        @Override
+        public boolean equals(Object objekLain) {
+            if (this == objekLain) {
+                return true;
+            }
+            if (!(objekLain instanceof StudentAttendanceEntry)) {
+                return false;
+            }
+            StudentAttendanceEntry lain = (StudentAttendanceEntry) objekLain;
+            return Objects.equals(studentId, lain.studentId)
+                    && Objects.equals(status, lain.status)
+                    && Objects.equals(notes, lain.notes);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(studentId, status, notes);
+        }
+
+        @Override
+        public String toString() {
+            return "StudentAttendanceEntry[studentId=" + studentId
+                    + ", status=" + status
+                    + ", notes=" + notes + "]";
+        }
     }
 
     private static final Set<String> VALID_STATUSES = Set.of(
@@ -129,8 +194,11 @@ public class AttendanceService {
             throw new IllegalArgumentException("ID absensi wajib diisi.");
         }
 
-        Attendance existing = attendanceDAO.findById(attendanceId)
-                .orElseThrow(() -> new IllegalArgumentException("Data absensi tidak ditemukan."));
+        Optional<Attendance> hasilCari = attendanceDAO.findById(attendanceId);
+        if (hasilCari.isEmpty()) {
+            throw new IllegalArgumentException("Data absensi tidak ditemukan.");
+        }
+        Attendance existing = hasilCari.get();
 
         requireClassAuthorization(existing.getClassId());
         String normalizedStatus = normalizeAndValidateStatus(status);
@@ -145,7 +213,9 @@ public class AttendanceService {
 
     public Optional<Attendance> getAttendanceById(Long id) {
         Optional<Attendance> found = attendanceDAO.findById(id);
-        found.ifPresent(a -> requireClassAuthorization(a.getClassId()));
+        if (found.isPresent()) {
+            requireClassAuthorization(found.get().getClassId());
+        }
         return found;
     }
 
@@ -168,9 +238,13 @@ public class AttendanceService {
         }
 
         Set<Long> assignedClasses = getAuthorizedClassIdsForTeacher(teacherId);
-        return allOnDate.stream()
-                .filter(a -> assignedClasses.contains(a.getClassId()))
-                .toList();
+        List<Attendance> daftarTersaring = new ArrayList<>();
+        for (Attendance catatan : allOnDate) {
+            if (assignedClasses.contains(catatan.getClassId())) {
+                daftarTersaring.add(catatan);
+            }
+        }
+        return daftarTersaring;
     }
 
     public List<Attendance> getAttendanceByClass(Long classId) {
@@ -190,8 +264,9 @@ public class AttendanceService {
             throw new IllegalArgumentException("ID siswa wajib diisi.");
         }
 
-        studentDAO.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
+        if (studentDAO.findById(studentId).isEmpty()) {
+            throw new IllegalArgumentException("Data siswa tidak ditemukan.");
+        }
 
         List<Attendance> history = attendanceDAO.findByStudentId(studentId);
         SessionContext session = SessionContext.getInstance();
@@ -200,13 +275,18 @@ public class AttendanceService {
         }
 
         Set<Long> assignedClasses = getAuthorizedClassIdsForTeacher(session.getTeacherId());
-        boolean hasAccessToCurrentClass = academicDAO.findActivePlacementByStudentId(studentId)
-                .map(p -> assignedClasses.contains(p.getClassId()))
-                .orElse(false);
+        boolean hasAccessToCurrentClass = false;
+        Optional<StudentPlacement> penempatanAktif = academicDAO.findActivePlacementByStudentId(studentId);
+        if (penempatanAktif.isPresent() && assignedClasses.contains(penempatanAktif.get().getClassId())) {
+            hasAccessToCurrentClass = true;
+        }
 
-        List<Attendance> filtered = history.stream()
-                .filter(a -> assignedClasses.contains(a.getClassId()))
-                .toList();
+        List<Attendance> filtered = new ArrayList<>();
+        for (Attendance catatan : history) {
+            if (assignedClasses.contains(catatan.getClassId())) {
+                filtered.add(catatan);
+            }
+        }
 
         if (!hasAccessToCurrentClass && filtered.isEmpty()) {
             throw new IllegalArgumentException(
@@ -234,12 +314,20 @@ public class AttendanceService {
 
         for (Attendance record : records) {
             switch (record.getStatus()) {
-                case Attendance.STATUS_HADIR -> hadir++;
-                case Attendance.STATUS_SAKIT -> sakit++;
-                case Attendance.STATUS_IZIN -> izin++;
-                case Attendance.STATUS_ALPA -> alpa++;
-                default -> {
-                }
+                case Attendance.STATUS_HADIR:
+                    hadir++;
+                    break;
+                case Attendance.STATUS_SAKIT:
+                    sakit++;
+                    break;
+                case Attendance.STATUS_IZIN:
+                    izin++;
+                    break;
+                case Attendance.STATUS_ALPA:
+                    alpa++;
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -270,8 +358,11 @@ public class AttendanceService {
             throw new IllegalArgumentException("ID kelas wajib diisi.");
         }
 
-        SchoolClass schoolClass = academicDAO.findClassById(classId)
-                .orElseThrow(() -> new IllegalArgumentException("Data kelas tidak ditemukan."));
+        Optional<SchoolClass> hasilKelas = academicDAO.findClassById(classId);
+        if (hasilKelas.isEmpty()) {
+            throw new IllegalArgumentException("Data kelas tidak ditemukan.");
+        }
+        SchoolClass schoolClass = hasilKelas.get();
 
         SessionContext session = SessionContext.getInstance();
         if (session.hasRole(RoleMapper.ROLE_ADMIN)) {
@@ -297,15 +388,19 @@ public class AttendanceService {
 
     private Set<Long> getAuthorizedClassIdsForTeacher(Long teacherId) {
         if (teacherId == null) {
-            return Set.of();
+            return new HashSet<>();
         }
         Set<Long> classIds = new HashSet<>();
-        academicDAO.findAllHomeroomAssignments().stream()
-                .filter(hr -> hr.isActive() && teacherId.equals(hr.getTeacherId()))
-                .forEach(hr -> classIds.add(hr.getClassId()));
-        academicDAO.findTeachingAssignmentsByTeacherId(teacherId).stream()
-                .filter(ta -> ta.isActive())
-                .forEach(ta -> classIds.add(ta.getClassId()));
+        for (HomeroomAssignment waliKelas : academicDAO.findAllHomeroomAssignments()) {
+            if (waliKelas.isActive() && teacherId.equals(waliKelas.getTeacherId())) {
+                classIds.add(waliKelas.getClassId());
+            }
+        }
+        for (TeachingAssignment mengajar : academicDAO.findTeachingAssignmentsByTeacherId(teacherId)) {
+            if (mengajar.isActive()) {
+                classIds.add(mengajar.getClassId());
+            }
+        }
         return classIds;
     }
 
@@ -314,21 +409,29 @@ public class AttendanceService {
             throw new IllegalArgumentException("ID siswa wajib diisi.");
         }
 
-        Student student = studentDAO.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Data siswa tidak ditemukan."));
+        Optional<Student> hasilSiswa = studentDAO.findById(studentId);
+        if (hasilSiswa.isEmpty()) {
+            throw new IllegalArgumentException("Data siswa tidak ditemukan.");
+        }
+        Student student = hasilSiswa.get();
         if (!student.isActive()) {
             throw new IllegalArgumentException("Siswa tidak aktif.");
         }
 
         List<StudentPlacement> history = academicDAO.findPlacementHistoryByStudentId(studentId);
-        boolean movedToAnotherClassOnDate = history.stream()
-                .anyMatch(p -> !p.getClassId().equals(classId)
-                        && p.getEntryDate().equals(date));
+        boolean movedToAnotherClassOnDate = false;
+        boolean belongsToClassOnDate = false;
 
-        boolean belongsToClassOnDate = history.stream()
-                .filter(p -> p.getClassId().equals(classId))
-                .anyMatch(p -> !date.isBefore(p.getEntryDate())
-                        && (p.getExitDate() == null || !date.isAfter(p.getExitDate())));
+        for (StudentPlacement penempatan : history) {
+            if (!penempatan.getClassId().equals(classId) && penempatan.getEntryDate().equals(date)) {
+                movedToAnotherClassOnDate = true;
+            }
+            if (penempatan.getClassId().equals(classId)
+                    && !date.isBefore(penempatan.getEntryDate())
+                    && (penempatan.getExitDate() == null || !date.isAfter(penempatan.getExitDate()))) {
+                belongsToClassOnDate = true;
+            }
+        }
 
         if (!belongsToClassOnDate || movedToAnotherClassOnDate) {
             throw new IllegalArgumentException(

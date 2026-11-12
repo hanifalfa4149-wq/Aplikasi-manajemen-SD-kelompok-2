@@ -6,17 +6,17 @@ import id.ac.sekolah.manajemenkelas.report.dao.ReportDAO;
 
 public class DashboardService {
 
-    private final ReportDAO reportDAO;
+    private final ReportDAO daoLaporan;
 
-    public DashboardService(ReportDAO reportDAO) {
-        if (reportDAO == null) {
+    public DashboardService(ReportDAO daoLaporan) {
+        if (daoLaporan == null) {
             throw new IllegalArgumentException("ReportDAO tidak boleh null.");
         }
-        this.reportDAO = reportDAO;
+        this.daoLaporan = daoLaporan;
     }
 
     public DashboardSummary getDashboardSummary() {
-        Long teacherIdScope = SessionContext.getInstance().resolveTeacherScopeOrNullForAdmin("dashboard");
-        return reportDAO.getDashboardSummary(teacherIdScope);
+        Long idCakupanGuru = SessionContext.getInstance().resolveTeacherScopeOrNullForAdmin("dashboard");
+        return daoLaporan.getDashboardSummary(idCakupanGuru);
     }
 }

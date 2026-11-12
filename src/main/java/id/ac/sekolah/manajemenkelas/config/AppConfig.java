@@ -19,13 +19,4 @@ public final class AppConfig {
     private AppConfig() {
         // Prevent object instantiation.
     }
-
-    public static void displayApplicationInfo() {
-        System.out.println("==========================================");
-        System.out.println("       " + APPLICATION_NAME);
-        System.out.println("==========================================");
-        System.out.println("Version : " + APPLICATION_VERSION);
-        System.out.println("Description : " + APPLICATION_DESCRIPTION);
-        System.out.println("==========================================");
-    }
 }

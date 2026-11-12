@@ -33,9 +33,10 @@ public final class SelectItem<T> {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof SelectItem<?> other)) {
+        if (!(o instanceof SelectItem<?>)) {
             return false;
         }
+        SelectItem<?> other = (SelectItem<?>) o;
         return Objects.equals(value, other.value);
     }
 

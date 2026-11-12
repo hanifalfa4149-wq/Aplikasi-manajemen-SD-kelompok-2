@@ -198,7 +198,12 @@ public class SidebarPanel extends JPanel {
         Map<String, List<NavRoute>> grouped = new LinkedHashMap<>();
         for (NavRoute route : NavRoute.values()) {
             if (route.isAuthorizedForRole(role)) {
-                grouped.computeIfAbsent(route.getCategory(), k -> new java.util.ArrayList<>()).add(route);
+                List<NavRoute> daftarKategori = grouped.get(route.getCategory());
+                if (daftarKategori == null) {
+                    daftarKategori = new java.util.ArrayList<>();
+                    grouped.put(route.getCategory(), daftarKategori);
+                }
+                daftarKategori.add(route);
             }
         }
 

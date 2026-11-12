@@ -7,38 +7,38 @@ public class Student {
     private Long id;
     private String nis;
     private String nisn;
-    private String fullName;
-    private String gender;
-    private LocalDate birthDate;
-    private String birthPlace;
-    private String address;
-    private String parentName;
-    private String parentPhone;
-    private boolean active;
+    private String namaLengkap;
+    private String jenisKelamin;
+    private LocalDate tanggalLahir;
+    private String tempatLahir;
+    private String alamat;
+    private String namaOrangTua;
+    private String teleponOrangTua;
+    private boolean aktif;
 
     public Student(
             Long id,
             String nis,
             String nisn,
-            String fullName,
-            String gender,
-            LocalDate birthDate,
-            String birthPlace,
-            String address,
-            String parentName,
-            String parentPhone,
-            boolean active) {
+            String namaLengkap,
+            String jenisKelamin,
+            LocalDate tanggalLahir,
+            String tempatLahir,
+            String alamat,
+            String namaOrangTua,
+            String teleponOrangTua,
+            boolean aktif) {
         this.id = id;
         this.nis = nis;
         this.nisn = nisn;
-        this.fullName = fullName;
-        this.gender = gender;
-        this.birthDate = birthDate;
-        this.birthPlace = birthPlace;
-        this.address = address;
-        this.parentName = parentName;
-        this.parentPhone = parentPhone;
-        this.active = active;
+        this.namaLengkap = namaLengkap;
+        this.jenisKelamin = jenisKelamin;
+        this.tanggalLahir = tanggalLahir;
+        this.tempatLahir = tempatLahir;
+        this.alamat = alamat;
+        this.namaOrangTua = namaOrangTua;
+        this.teleponOrangTua = teleponOrangTua;
+        this.aktif = aktif;
     }
 
     public Long getId() {
@@ -58,35 +58,35 @@ public class Student {
     }
 
     public String getFullName() {
-        return fullName;
+        return namaLengkap;
     }
 
     public String getGender() {
-        return gender;
+        return jenisKelamin;
     }
 
     public LocalDate getBirthDate() {
-        return birthDate;
+        return tanggalLahir;
     }
 
     public String getBirthPlace() {
-        return birthPlace;
+        return tempatLahir;
     }
 
     public String getAddress() {
-        return address;
+        return alamat;
     }
 
     public String getParentName() {
-        return parentName;
+        return namaOrangTua;
     }
 
     public String getParentPhone() {
-        return parentPhone;
+        return teleponOrangTua;
     }
 
     public boolean isActive() {
-        return active;
+        return aktif;
     }
 
     public void setNis(String nis) {
@@ -97,35 +97,35 @@ public class Student {
         this.nisn = nisn;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public void setFullName(String namaLengkap) {
+        this.namaLengkap = namaLengkap;
     }
 
-    public void setGender(String gender) {
-        this.gender = gender;
+    public void setGender(String jenisKelamin) {
+        this.jenisKelamin = jenisKelamin;
     }
 
-    public void setBirthDate(LocalDate birthDate) {
-        this.birthDate = birthDate;
+    public void setBirthDate(LocalDate tanggalLahir) {
+        this.tanggalLahir = tanggalLahir;
     }
 
-    public void setBirthPlace(String birthPlace) {
-        this.birthPlace = birthPlace;
+    public void setBirthPlace(String tempatLahir) {
+        this.tempatLahir = tempatLahir;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setAddress(String alamat) {
+        this.alamat = alamat;
     }
 
-    public void setParentName(String parentName) {
-        this.parentName = parentName;
+    public void setParentName(String namaOrangTua) {
+        this.namaOrangTua = namaOrangTua;
     }
 
-    public void setParentPhone(String parentPhone) {
-        this.parentPhone = parentPhone;
+    public void setParentPhone(String teleponOrangTua) {
+        this.teleponOrangTua = teleponOrangTua;
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
+    public void setActive(boolean aktif) {
+        this.aktif = aktif;
     }
 }
