@@ -212,5 +212,24 @@ class PostgresAuthDAOIntegrationTest {
         assertEquals(RoleMapper.ROLE_TEACHER, SessionContext.getInstance().getRole());
         assertEquals(guruBaru.getId(), SessionContext.getInstance().getTeacherId());
     }
+
+    @Test
+    void signUpAndRoleRestrictedLoginWorkInPostgres() {
+        PostgresAuthDAO authDAO = new PostgresAuthDAO();
+        AuthService authService = new AuthService(authDAO, new PasswordHasher());
+
+        User adminDaftar = authService.register("test_phase1_signup_adm", "Sandi123", RoleMapper.ROLE_ADMIN);
+        User guruDaftar = authService.register("test_phase1_signup_gru", "Sandi123", RoleMapper.ROLE_TEACHER);
+
+        assertNotNull(adminDaftar.getId());
+        assertNotNull(guruDaftar.getId());
+
+        assertTrue(authService.login("test_phase1_signup_adm", "Sandi123", RoleMapper.ROLE_ADMIN));
+        assertEquals(RoleMapper.ROLE_ADMIN, SessionContext.getInstance().getRole());
+        authService.logout();
+
+        assertTrue(authService.login("test_phase1_signup_gru", "Sandi123", RoleMapper.ROLE_TEACHER));
+        assertEquals(RoleMapper.ROLE_TEACHER, SessionContext.getInstance().getRole());
+    }
 }
 

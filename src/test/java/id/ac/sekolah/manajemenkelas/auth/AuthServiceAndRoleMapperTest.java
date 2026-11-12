@@ -80,6 +80,41 @@ class AuthServiceAndRoleMapperTest {
         assertFalse(authService.isAuthenticated());
     }
 
+    @Test
+    void registerCreatesAccountAndLoginEnforcesSelectedRole() {
+        StubAuthDAO authDAO = new StubAuthDAO();
+        PasswordHasher hasher = new PasswordHasher();
+        AuthService authService = new AuthService(authDAO, hasher);
+
+        User guruBaru = authService.register("guru_baru", "sandi123", RoleMapper.ROLE_TEACHER);
+        User adminBaru = authService.register("admin_baru", "sandi456", RoleMapper.ROLE_ADMIN);
+
+        assertNotNull(guruBaru.getId());
+        assertEquals(RoleMapper.ROLE_TEACHER, guruBaru.getRole());
+        assertEquals(RoleMapper.ROLE_ADMIN, adminBaru.getRole());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> authService.register("guru_baru", "lain123", RoleMapper.ROLE_TEACHER));
+        assertThrows(IllegalArgumentException.class,
+                () -> authService.register("ab", "1234", RoleMapper.ROLE_TEACHER));
+        assertThrows(IllegalArgumentException.class,
+                () -> authService.register("guru baru", "1234", RoleMapper.ROLE_TEACHER));
+        assertThrows(IllegalArgumentException.class,
+                () -> authService.register("user_ok", "123", RoleMapper.ROLE_ADMIN));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> authService.login("guru_baru", "sandi123", RoleMapper.ROLE_ADMIN));
+        assertFalse(authService.isAuthenticated());
+
+        assertTrue(authService.login("guru_baru", "sandi123", RoleMapper.ROLE_TEACHER));
+        assertTrue(authService.isAuthenticated());
+        assertTrue(authService.hasRole(RoleMapper.ROLE_TEACHER));
+        authService.logout();
+
+        assertTrue(authService.login("admin_baru", "sandi456", RoleMapper.ROLE_ADMIN));
+        assertTrue(authService.hasRole(RoleMapper.ROLE_ADMIN));
+    }
+
     private static final class StubAuthDAO implements AuthDAO {
 
         private final Map<String, User> usersByUsername = new HashMap<>();

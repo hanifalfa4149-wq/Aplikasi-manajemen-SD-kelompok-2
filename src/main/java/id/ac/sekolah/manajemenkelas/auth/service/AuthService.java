@@ -28,6 +28,10 @@ public class AuthService {
     }
 
     public boolean login(String namaPengguna, String kataSandi) {
+        return login(namaPengguna, kataSandi, null);
+    }
+
+    public boolean login(String namaPengguna, String kataSandi, String peranDiharapkan) {
         if (namaPengguna == null || namaPengguna.isBlank()
                 || kataSandi == null || kataSandi.isBlank()) {
             return false;
@@ -50,6 +54,15 @@ public class AuthService {
             return false;
         }
 
+        if (peranDiharapkan != null && !peranDiharapkan.isBlank()) {
+            String peranNormalisasi = RoleMapper.fromDatabaseRole(RoleMapper.toDatabaseRole(peranDiharapkan));
+            if (!peranNormalisasi.equalsIgnoreCase(pengguna.getRole())) {
+                throw new IllegalArgumentException(
+                        "Akun ini terdaftar sebagai " + formatLabelPeran(pengguna.getRole())
+                                + ", bukan " + formatLabelPeran(peranNormalisasi) + ".");
+            }
+        }
+
         daoOtentikasi.updateLastLogin(pengguna.getId());
 
         konteksSesi.startSession(
@@ -60,6 +73,60 @@ public class AuthService {
                 pengguna.getRole());
 
         return true;
+    }
+
+    public User register(String namaPengguna, String kataSandi, String peran) {
+        if (namaPengguna == null || namaPengguna.isBlank()) {
+            throw new IllegalArgumentException("Username wajib diisi.");
+        }
+
+        String usernameBersih = namaPengguna.trim();
+        if (usernameBersih.contains(" ")) {
+            throw new IllegalArgumentException("Username tidak boleh mengandung spasi.");
+        }
+        if (usernameBersih.length() < 3) {
+            throw new IllegalArgumentException("Username minimal 3 karakter.");
+        }
+
+        if (kataSandi == null || kataSandi.isBlank()) {
+            throw new IllegalArgumentException("Password wajib diisi.");
+        }
+        if (kataSandi.length() < 4) {
+            throw new IllegalArgumentException("Password minimal 4 karakter.");
+        }
+
+        String peranNormalisasi = RoleMapper.fromDatabaseRole(RoleMapper.toDatabaseRole(peran));
+
+        if (daoOtentikasi.existsByUsername(usernameBersih)) {
+            throw new IllegalArgumentException(
+                    "Username \"" + usernameBersih + "\" sudah terdaftar. Silakan gunakan username lain.");
+        }
+
+        String salt = pengacakSandi.generateSalt();
+        String hash = pengacakSandi.hashPassword(kataSandi, salt);
+
+        User akunBaru = new User(
+                null,
+                null,
+                usernameBersih,
+                hash,
+                salt,
+                usernameBersih,
+                peranNormalisasi,
+                true,
+                null);
+        daoOtentikasi.save(akunBaru);
+        return akunBaru;
+    }
+
+    private static String formatLabelPeran(String peran) {
+        if (RoleMapper.ROLE_ADMIN.equalsIgnoreCase(peran)) {
+            return "Admin";
+        }
+        if (RoleMapper.ROLE_TEACHER.equalsIgnoreCase(peran)) {
+            return "Guru";
+        }
+        return peran;
     }
 
     public void logout() {
